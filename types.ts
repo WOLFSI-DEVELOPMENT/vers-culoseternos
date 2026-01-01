@@ -43,3 +43,22 @@ export interface User {
   username: string;
   bio?: string;
 }
+
+export interface YouTubeVideo {
+  id: {
+    videoId: string;
+  };
+  snippet: {
+    title: string;
+    description: string;
+    thumbnails: {
+      high: {
+        url: string;
+      };
+      medium: {
+        url: string;
+      };
+    };
+    channelTitle: string;
+  };
+}

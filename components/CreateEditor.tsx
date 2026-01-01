@@ -111,24 +111,24 @@ const GlassSlider = ({ value, min, max, onChange, label }: { value: number, min:
                 onPointerLeave={handlePointerUp}
             >
                 {/* Track Background */}
-                <div ref={trackRef} className="absolute w-full h-2 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/5">
+                <div ref={trackRef} className="absolute w-full h-2 bg-white/10 rounded-full overflow-hidden backdrop-blur-md border border-white/5">
                     {/* Active Track Fill */}
                     <div 
-                        className="h-full bg-gradient-to-r from-blue-400/50 to-purple-400/50 blur-[2px] transition-all duration-75 ease-out" 
+                        className="h-full bg-white transition-all duration-75 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]" 
                         style={{ width: `${percent}%` }}
                     />
                 </div>
 
                 {/* Liquid Pill Thumb */}
                 <div 
-                    className="absolute h-6 w-12 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 shadow-[0_4px_14px_0_rgba(255,255,255,0.15)] flex items-center justify-center transition-transform duration-150 ease-out will-change-transform"
+                    className="absolute h-6 w-12 rounded-full backdrop-blur-xl bg-white/10 border border-white/60 shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center justify-center transition-transform duration-150 ease-out will-change-transform hover:scale-110 hover:bg-white/20"
                     style={{ 
                         left: `calc(${percent}% - 24px)`, // Center the 48px (w-12) thumb
                         transform: isSliding ? 'scale(1.1)' : 'scale(1)'
                     }}
                 >
                     {/* Inner Glint */}
-                    <div className="w-4 h-1 bg-white/40 rounded-full mb-1" />
+                    <div className="w-4 h-1 bg-white/60 rounded-full mb-1" />
                 </div>
             </div>
         </div>
@@ -261,8 +261,6 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         const deltaX = e.clientX - dragStartPos.current.x;
         const deltaY = e.clientY - dragStartPos.current.y;
 
-        // Calculate new percentage based on initial position + delta
-        // We use initial pos to avoid compounding errors
         const percentDeltaX = (deltaX / rect.width) * 100;
         const percentDeltaY = (deltaY / rect.height) * 100;
 
@@ -284,7 +282,6 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     if (isDragging) {
         window.addEventListener('pointermove', handleGlobalMove);
         window.addEventListener('pointerup', handleGlobalUp);
-        // Also handle cases where mouse leaves window
         window.addEventListener('pointerleave', handleGlobalUp);
     }
 
@@ -328,43 +325,109 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     setDownloadProgress(0);
     setIsDownloadMenuOpen(false);
 
-    // Simulate progress for video/gif
-    const isVideo = format !== 'png';
-    if (isVideo) {
-        const interval = setInterval(() => {
-            setDownloadProgress(prev => {
-                if (prev >= 95) {
-                    clearInterval(interval);
-                    return 95;
-                }
-                return prev + 5;
+    // Standard PNG export
+    if (format === 'png') {
+        try {
+            const canvas = await html2canvas(captureRef.current, {
+                scale: 3, 
+                useCORS: true, 
+                backgroundColor: null,
             });
-        }, 200);
-        await new Promise(resolve => setTimeout(resolve, format === 'mp4' ? 3000 : 2000));
-        clearInterval(interval);
+
+            const link = document.createElement('a');
+            link.download = `versiculo-${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png'); 
+            link.click();
+            setDownloadProgress(100);
+        } catch (err) {
+            console.error("Download failed", err);
+        } finally {
+            setTimeout(() => {
+                setIsDownloading(false);
+                setDownloadProgress(0);
+            }, 1000);
+        }
+        return;
     }
 
+    // REAL VIDEO/GIF EXPORT LOGIC
+    // Since we don't have FFmpeg, we use MediaRecorder on a temporary canvas
     try {
-      const canvas = await html2canvas(captureRef.current, {
-        scale: 3, 
-        useCORS: true, 
-        backgroundColor: null,
-      });
+        setDownloadProgress(10);
+        
+        // 1. Capture the current design as a high-res image
+        const sourceCanvas = await html2canvas(captureRef.current, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: null
+        });
+        
+        // 2. Setup recording canvas
+        const recordingCanvas = document.createElement('canvas');
+        recordingCanvas.width = sourceCanvas.width;
+        recordingCanvas.height = sourceCanvas.height;
+        const ctx = recordingCanvas.getContext('2d');
+        
+        if (!ctx) throw new Error("Could not create recording context");
 
-      const link = document.createElement('a');
-      const ext = format === 'mp4' ? 'mp4' : (format === 'gif' ? 'gif' : 'png');
-      link.download = `versiculo-${Date.now()}.${ext}`;
-      link.href = canvas.toDataURL('image/png'); 
-      link.click();
-      
-      setDownloadProgress(100);
+        // 3. Setup MediaRecorder
+        const stream = recordingCanvas.captureStream(30); // 30 FPS
+        const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
+        const recorder = new MediaRecorder(stream, { mimeType });
+        
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunks.push(e.data);
+        };
+        
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `versiculo-${Date.now()}.${mimeType === 'video/mp4' ? 'mp4' : 'webm'}`;
+            a.click();
+            setIsDownloading(false);
+            setDownloadProgress(100);
+        };
+
+        // 4. Animation Loop (Ken Burns Effect)
+        recorder.start();
+        const duration = 5000; // 5 seconds
+        const startTime = Date.now();
+        
+        const drawFrame = () => {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Calculate scale (1.0 to 1.1)
+            const scale = 1 + (progress * 0.1);
+            
+            // Clear and draw with transform
+            ctx.clearRect(0, 0, recordingCanvas.width, recordingCanvas.height);
+            ctx.save();
+            ctx.translate(recordingCanvas.width / 2, recordingCanvas.height / 2);
+            ctx.scale(scale, scale);
+            ctx.translate(-recordingCanvas.width / 2, -recordingCanvas.height / 2);
+            ctx.drawImage(sourceCanvas, 0, 0);
+            ctx.restore();
+            
+            setDownloadProgress(10 + Math.round(progress * 80));
+
+            if (progress < 1) {
+                requestAnimationFrame(drawFrame);
+            } else {
+                recorder.stop();
+            }
+        };
+        
+        drawFrame();
+
     } catch (err) {
-      console.error("Download failed", err);
-    } finally {
-      setTimeout(() => {
-          setIsDownloading(false);
-          setDownloadProgress(0);
-      }, 1000);
+        console.error("Video export failed", err);
+        alert("Tu navegador no soporta la grabación de video. Intenta con Chrome o Firefox.");
+        setIsDownloading(false);
     }
   };
 
@@ -550,83 +613,100 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     </div>
   );
 
+  const handleDeselect = (e: React.MouseEvent) => {
+      // If clicking the container background itself, deselect overlays
+      if (e.target === e.currentTarget) {
+          setActiveOverlayId(null);
+      }
+  };
+
   const renderPreviewCard = () => (
     <div 
-      ref={captureRef}
-      className={`relative rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center p-8 text-center mx-auto touch-none select-none transition-all duration-500 ease-in-out ${aspectRatio === '9:16' ? 'w-[320px] h-[569px] sm:w-[360px] sm:h-[640px]' : 'w-[569px] h-[320px] sm:w-[640px] sm:h-[360px]'}`}
-      style={{
-        background: bgType === 'gradient' ? gradient : 'transparent',
-      }}
+      className="p-10 cursor-pointer"
+      onClick={handleDeselect} // Wrapper to catch clicks outside
     >
-      {bgType === 'image' && bgImage && (
-        <>
-            <img 
-                src={bgImage} 
-                alt="Background" 
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-all duration-300"
-                style={{ 
-                    filter: `${selectedFilter} contrast(${100 + (sharpenLevel * 0.5)}%) saturate(${100 + (sharpenLevel * 0.3)}%)` 
-                }} 
-            />
-            <div 
-                className="absolute inset-0 pointer-events-none transition-all duration-300" 
-                style={{ backgroundColor: `rgba(0,0,0, ${bgOverlayOpacity / 100})` }}
-            />
-        </>
-      )}
-
-      {/* Main Text Layer (Below Overlays) */}
-      <div 
-        className="relative z-10 text-white drop-shadow-lg pointer-events-none select-none transition-opacity duration-300"
-        style={{ opacity: textOpacity / 100 }}
-      >
-        <h2 
-          className="text-2xl sm:text-3xl font-bold mb-4 leading-relaxed"
-          style={{ fontFamily: FONTS[fontIndex].family }}
+        <div 
+          ref={captureRef}
+          className={`relative rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center p-8 text-center mx-auto touch-none select-none transition-all duration-500 ease-in-out ${aspectRatio === '9:16' ? 'w-[320px] h-[569px] sm:w-[360px] sm:h-[640px]' : 'w-[569px] h-[320px] sm:w-[640px] sm:h-[360px]'}`}
+          style={{
+            background: bgType === 'gradient' ? gradient : 'transparent',
+          }}
+          onClick={(e) => {
+              // Also catch clicks on the card background to deselect stickers
+              if(e.target === e.currentTarget) setActiveOverlayId(null);
+          }}
         >
-          {text}
-        </h2>
-        <p 
-          className="text-sm sm:text-base opacity-90 font-medium tracking-wide uppercase mt-4"
-          style={{ fontFamily: 'Lato, sans-serif' }}
-        >
-          {reference}
-        </p>
-      </div>
+          {bgType === 'image' && bgImage && (
+            <>
+                <img 
+                    src={bgImage} 
+                    alt="Background" 
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-all duration-300"
+                    style={{ 
+                        filter: `${selectedFilter} contrast(${100 + (sharpenLevel * 0.5)}%) saturate(${100 + (sharpenLevel * 0.3)}%)` 
+                    }} 
+                />
+                <div 
+                    className="absolute inset-0 pointer-events-none transition-all duration-300" 
+                    style={{ backgroundColor: `rgba(0,0,0, ${bgOverlayOpacity / 100})` }}
+                />
+            </>
+          )}
 
-      {/* Overlays Layer */}
-      {overlays.map((overlay) => (
-          <div
-            key={overlay.id}
-            onPointerDown={(e) => handlePointerDown(e, overlay.id)}
-            className={`absolute z-20 cursor-move transition-transform active:scale-105 ${activeOverlayId === overlay.id ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent rounded-lg' : ''}`}
-            style={{
-                left: `${overlay.x}%`,
-                top: `${overlay.y}%`,
-                transform: `translate(-50%, -50%) scale(${overlay.scale})`,
-                touchAction: 'none' // Important for mobile drag
-            }}
+          {/* Main Text Layer (Below Overlays) */}
+          <div 
+            className="relative z-10 text-white drop-shadow-lg pointer-events-none select-none transition-opacity duration-300"
+            style={{ opacity: textOpacity / 100 }}
           >
-              {overlay.type === 'emoji' ? (
-                  <span className="text-4xl drop-shadow-md select-none">{overlay.content}</span>
-              ) : (
-                  <img src={overlay.content} alt="sticker" className="w-24 h-24 object-contain drop-shadow-md select-none pointer-events-none" />
-              )}
-              
-              {activeOverlayId === overlay.id && (
-                  <button 
-                    onPointerDown={(e) => { e.stopPropagation(); removeOverlay(overlay.id); }}
-                    className="absolute -top-4 -right-4 bg-red-500 text-white p-1 rounded-full shadow-lg z-30"
-                  >
-                      <X size={12} />
-                  </button>
-              )}
+            <h2 
+              className="text-2xl sm:text-3xl font-bold mb-4 leading-relaxed"
+              style={{ fontFamily: FONTS[fontIndex].family }}
+            >
+              {text}
+            </h2>
+            <p 
+              className="text-sm sm:text-base opacity-90 font-medium tracking-wide uppercase mt-4"
+              style={{ fontFamily: 'Lato, sans-serif' }}
+            >
+              {reference}
+            </p>
           </div>
-      ))}
 
-      <div className="absolute bottom-6 text-[10px] text-white/50 font-sans tracking-widest uppercase pointer-events-none">
-        Versículos Eternos
-      </div>
+          {/* Overlays Layer */}
+          {overlays.map((overlay) => (
+              <div
+                key={overlay.id}
+                onPointerDown={(e) => handlePointerDown(e, overlay.id)}
+                className={`absolute z-20 cursor-move transition-transform active:scale-105 ${activeOverlayId === overlay.id ? 'ring-2 ring-white ring-offset-2 ring-offset-transparent rounded-lg' : ''}`}
+                style={{
+                    left: `${overlay.x}%`,
+                    top: `${overlay.y}%`,
+                    transform: `translate(-50%, -50%) scale(${overlay.scale})`,
+                    touchAction: 'none' // Important for mobile drag
+                }}
+                onClick={(e) => { e.stopPropagation(); setActiveOverlayId(overlay.id); }}
+              >
+                  {overlay.type === 'emoji' ? (
+                      <span className="text-4xl drop-shadow-md select-none">{overlay.content}</span>
+                  ) : (
+                      <img src={overlay.content} alt="sticker" className="w-24 h-24 object-contain drop-shadow-md select-none pointer-events-none" />
+                  )}
+                  
+                  {activeOverlayId === overlay.id && (
+                      <button 
+                        onPointerDown={(e) => { e.stopPropagation(); removeOverlay(overlay.id); }}
+                        className="absolute -top-4 -right-4 bg-red-500 text-white p-1 rounded-full shadow-lg z-30"
+                      >
+                          <X size={12} />
+                      </button>
+                  )}
+              </div>
+          ))}
+
+          <div className="absolute bottom-6 text-[10px] text-white/50 font-sans tracking-widest uppercase pointer-events-none">
+            Versículos Eternos
+          </div>
+        </div>
     </div>
   );
 
@@ -642,17 +722,10 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                         <ImageIcon size={16} className="text-gray-400" />
                     </button>
                     <button 
-                        onClick={() => triggerDownload('gif')}
-                        className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl text-white font-medium flex items-center justify-between"
-                    >
-                        <span>GIF Animado (5s)</span>
-                        <Film size={16} className="text-purple-400" />
-                    </button>
-                    <button 
                         onClick={() => triggerDownload('mp4')}
                         className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl text-white font-medium flex items-center justify-between"
                     >
-                        <span>Video MP4 (7s)</span>
+                        <span>Video MP4 (Zoom Effect)</span>
                         <Film size={16} className="text-blue-400" />
                     </button>
                     <div className="h-px bg-white/10 my-1" />
@@ -856,11 +929,8 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                   <button onClick={() => triggerDownload('png')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
                       <ImageIcon className="text-green-400" /> PNG de Alta Calidad
                   </button>
-                  <button onClick={() => triggerDownload('gif')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
-                      <Film className="text-purple-400" /> GIF Animado (5s)
-                  </button>
                   <button onClick={() => triggerDownload('mp4')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
-                      <Film className="text-blue-400" /> Video MP4 (7s)
+                      <Film className="text-blue-400" /> Video MP4 (Zoom)
                   </button>
                   {isDownloading && (
                       <div className="w-full bg-gray-800 rounded-full h-2 mt-4 overflow-hidden">
@@ -876,62 +946,62 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar p-4 safe-area-pb">
           <button 
             onClick={() => { setActiveMobileTool('text'); setIsGradientMode(false); }}
-            className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'text' ? 'text-white' : 'text-gray-500'}`}
+            className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'text' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <Type size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'text' ? 'bg-white' : 'bg-white/10'}`}>
+              <Type size={24} strokeWidth={2.5} className={activeMobileTool === 'text' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Texto</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Texto</span>
           </button>
           
           <button 
              onClick={() => { setActiveMobileTool('bg'); setIsGradientMode(false); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px]`}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'bg' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <ImageIcon size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'bg' ? 'bg-white' : 'bg-white/10'}`}>
+              <ImageIcon size={24} strokeWidth={2.5} className={activeMobileTool === 'bg' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Fondo</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Fondo</span>
           </button>
 
           <button 
              onClick={() => { setActiveMobileTool('filters'); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px]`}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'filters' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <Sliders size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'filters' ? 'bg-white' : 'bg-white/10'}`}>
+              <Sliders size={24} strokeWidth={2.5} className={activeMobileTool === 'filters' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Filtros</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Filtros</span>
           </button>
 
           <button 
              onClick={() => { setActiveMobileTool('sharpen'); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px]`}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'sharpen' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <Zap size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'sharpen' ? 'bg-white' : 'bg-white/10'}`}>
+              <Zap size={24} strokeWidth={2.5} className={activeMobileTool === 'sharpen' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Sharpen</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Sharpen</span>
           </button>
 
           <button 
              onClick={() => { setActiveMobileTool('stickers'); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px]`}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'stickers' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <Smile size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'stickers' ? 'bg-white' : 'bg-white/10'}`}>
+              <Smile size={24} strokeWidth={2.5} className={activeMobileTool === 'stickers' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Stickers</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Stickers</span>
           </button>
 
           <button 
              onClick={() => { setActiveMobileTool('gifs'); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px]`}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'gifs' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className="p-3 bg-white/10 rounded-full mb-1">
-              <Film size={24} strokeWidth={2.5} className="text-white" />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'gifs' ? 'bg-white' : 'bg-white/10'}`}>
+              <Film size={24} strokeWidth={2.5} className={activeMobileTool === 'gifs' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">GIFs</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">GIFs</span>
           </button>
         </div>
       </div>
@@ -1175,7 +1245,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
          <div className="pt-6 mt-2 border-t border-white/10 animate-in fade-in duration-500">
              {renderDownloadButton()}
              <p className="text-center text-xs text-gray-500 mt-3">
-                 {downloadMode === 'png' ? 'Formato PNG de alta calidad' : 'Video renderizado (Simulado)'}
+                 {downloadMode === 'png' ? 'Formato PNG de alta calidad' : 'Video generado en tiempo real (Ken Burns Effect)'}
              </p>
          </div>
       </div>

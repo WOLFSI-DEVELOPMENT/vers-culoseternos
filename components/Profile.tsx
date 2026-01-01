@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SavedDesign, VerseCardData, User } from '../types';
-import { Grid, Settings, Bookmark, Check, X, Camera } from 'lucide-react';
+import { Grid, Settings, Bookmark, Check, X, Camera, LogOut, Share2 } from 'lucide-react';
 
 const FONTS = [
   { name: 'Moderno', family: 'Montserrat, sans-serif' },
@@ -21,9 +21,10 @@ interface ProfileProps {
   favorites: VerseCardData[];
   user: User;
   onUpdateUser: (user: User) => void;
+  onLogout: () => void;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUpdateUser }) => {
+export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUpdateUser, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<User>(user);
@@ -36,6 +37,26 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUp
   const handleCancelEdit = () => {
     setEditForm(user);
     setIsEditing(false);
+  };
+
+  const handleShareDesign = async (e: React.MouseEvent, design: SavedDesign) => {
+    e.stopPropagation();
+    const shareData = {
+        title: 'Mi Diseño - Versículos Eternos',
+        text: `"${design.text}" - ${design.reference} 🎨`,
+        url: window.location.href
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.error('Error sharing:', err);
+        }
+    } else {
+        navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+        alert('Copiado al portapapeles');
+    }
   };
 
   if (isEditing) {
@@ -102,7 +123,16 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUp
   return (
     <div className="max-w-4xl mx-auto pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 px-4 py-8 mb-8 border-b border-white/10">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 px-4 py-8 mb-8 border-b border-white/10 relative">
+        
+        {/* Sign Out Button (Absolute Top Right) */}
+        <button 
+             onClick={onLogout}
+             className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all text-xs font-bold text-gray-400"
+        >
+            <LogOut size={14} /> Cerrar Sesión
+        </button>
+
         {/* Avatar */}
         <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 p-[2px]">
           <div className="w-full h-full rounded-full bg-black border-4 border-black flex items-center justify-center overflow-hidden">
@@ -135,14 +165,6 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUp
             <div className="flex flex-col md:flex-row gap-1 items-center">
                 <span className="font-bold text-white">{designs.length}</span>
                 <span className="text-gray-400">publicaciones</span>
-            </div>
-            <div className="flex flex-col md:flex-row gap-1 items-center">
-                <span className="font-bold text-white">128</span>
-                <span className="text-gray-400">seguidores</span>
-            </div>
-             <div className="flex flex-col md:flex-row gap-1 items-center">
-                <span className="font-bold text-white">45</span>
-                <span className="text-gray-400">seguidos</span>
             </div>
           </div>
 
@@ -213,9 +235,15 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUp
                                 </div>
                                 {/* Hover Overlay */}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                     <div className="flex gap-4 text-white font-bold">
+                                     <div className="flex gap-4 text-white font-bold items-center">
                                         <span>❤️ 0</span>
-                                        <span>💬 0</span>
+                                        <button 
+                                            onClick={(e) => handleShareDesign(e, design)}
+                                            className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                                            title="Compartir"
+                                        >
+                                            <Share2 size={20} />
+                                        </button>
                                      </div>
                                 </div>
                             </div>

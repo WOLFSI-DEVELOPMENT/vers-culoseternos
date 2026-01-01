@@ -6,10 +6,13 @@ import { VerseCard } from './components/VerseCard';
 import { CreateEditor } from './components/CreateEditor';
 import { Profile } from './components/Profile';
 import { Auth } from './components/Auth';
+import { VideoFeed } from './components/VideoFeed';
+import { BibleReader } from './components/BibleReader';
 import { CARD_HEIGHTS } from './constants';
-import { Loader2, Search, Home, Heart, Compass, BookmarkX, PlusCircle, Rocket, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { Loader2, Search, Home, Heart, Compass, BookmarkX, PlusCircle, Rocket, MessageCircle, Share2, Bookmark, Video, Book, Image as ImageIcon } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = '7302993140-qgo9bovj97d11d68q7hje32da15bvm14.apps.googleusercontent.com';
+const YOUTUBE_API_KEY = 'AIzaSyBd5o02cc1ArgEyHPRZZ_H0k0Ro_AqMbcY';
 
 const getRandomHeight = () => CARD_HEIGHTS[Math.floor(Math.random() * CARD_HEIGHTS.length)];
 const getRandomImage = (id: string) => `https://picsum.photos/seed/${id}/400/600`;
@@ -26,7 +29,7 @@ const CommunityIcon = ({ size = 24, className = "" }: { size?: number, className
     className={className}
     style={{ overflow: 'visible' }}
   >
-    <path d="M1.3333333333333333 14.666666666666666c0 -2.9455333333333336 2.387813333333333 -5.333333333333333 5.333333333333333 -5.333333333333333 2.9455333333333336 0 5.333333333333333 2.3878 5.333333333333333 5.333333333333333h-1.3333333333333333c0 -2.209133333333333 -1.7908666666666666 -4 -4 -4 -2.2091399999999997 0 -4 1.7908666666666666 -4 4H1.3333333333333333Zm5.333333333333333 -6c-2.21 0 -4 -1.79 -4 -4s1.79 -4 4 -4 4 1.79 4 4 -1.79 4 -4 4Zm0 -1.3333333333333333c1.4733333333333332 0 2.6666666666666665 -1.1933333333333334 2.6666666666666665 -2.6666666666666665s-1.1933333333333334 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 1.1933333333333334 -2.6666666666666665 2.6666666666666665 1.1933333333333334 2.6666666666666665 2.6666666666666665 2.6666666666666665Zm5.522466666666666 2.4685333333333332C14.042933333333332 10.6374 15.333333333333332 12.501333333333331 15.333333333333332 14.666666666666666h-1.3333333333333333c0 -1.6239999999999999 -0.9678 -3.021933333333333 -2.358133333333333 -3.6486l0.5472666666666666 -1.2162Zm-0.4583333333333333 -7.526393333333333C13.062933333333334 2.8246866666666666 14 4.13574 14 5.666666666666666c0 1.9134666666666666 -1.4638666666666666 3.4834666666666667 -3.333333333333333 3.651733333333333v-1.3419999999999999c1.1311333333333333 -0.1616 2 -1.1337333333333333 2 -2.309733333333333 0 -0.9204333333333332 -0.5322666666666667 -1.71598 -1.306 -2.0957666666666666l0.3701333333333333 -1.2954266666666667Z" strokeWidth="1.2"></path>
+    <path d="M1.3333333333333333 14.666666666666666c0 -2.9455333333333336 2.387813333333333 -5.333333333333333 5.333333333333333 -5.333333333333333 2.9455333333333336 0 5.333333333333333 2.3878 5.333333333333333 5.333333333333333h-1.3333333333333333c0 -2.209133333333333 -1.7908666666666666 -4 -4 -4 -2.2091399999999997 0 -4 1.7908666666666666 -4 4H1.3333333333333333Zm5.333333333333333 -6c-2.21 0 -4 -1.79 -4 -4s1.79 -4 4 -4 4 1.79 4 4 -1.79 4 -4 4Zm0 -1.3333333333333333c1.4733333333333332 0 2.6666666666666665 -1.1933333333333334 2.6666666666666665 -2.6666666666666665s-1.1933333333333334 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 1.1933333333333334 -2.6666666666666665 2.6666666666666665 1.1933333333333334 2.6666666666666665 2.6666666666666665Zm5.522466666666666 2.4685333333333332C14.042933333333332 10.6374 15.333333333333332 12.501333333333331 15.333333333333332 14.666666666666666h-1.3333333333333333c0 -1.6239999999999999 -0.9678 -3.021933333333333 -2.358133333333333 -3.6486l0.5472666666666666 -1.2162Zm-0.4583333333333333 -7.526393333333333C13.062933333333334 2.8246866666666666 14 4.13574 14 5.666666666666666c0 1.9134666666666666 -1.4638666666666666 3.4834666666666667 -3.333333333333333 3.651733333333333v-1.3419999999999999c1.1311333333333333 -0.1616 2 -1.1337333333333333 2 -2.309733333333333 0 -0.9204333333333332 -0.5322666666666667 -1.71598 -1.306 -2.0957666666666666l0.3701333333333333 -1.2954266666666667Z" strokeWidth="1.2"></path>
   </svg>
 );
 
@@ -37,12 +40,20 @@ function App() {
   const [verses, setVerses] = useState<VerseCardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
+  
+  // Navigation State
   const [activeTab, setActiveTab] = useState('home');
+  const [homeSubTab, setHomeSubTab] = useState<'verses' | 'videos' | 'bible'>('verses');
   
   // Explore State
   const [exploreSubTab, setExploreSubTab] = useState<'posts' | 'verses'>('verses');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  
+  // Search State for Home
+  const [homeSearchQuery, setHomeSearchQuery] = useState('');
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const homeSearchInputRef = useRef<HTMLInputElement>(null);
   
   // Favorites State
   const [favorites, setFavorites] = useState<VerseCardData[]>(() => {
@@ -82,6 +93,14 @@ function App() {
   const handleLoginSuccess = (userData: User) => {
       setUser(userData);
       setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+      setInitialLoad(true);
+      setVerses([]);
+      setActiveTab('home');
   };
 
   const toggleFavorite = (verse: VerseCardData) => {
@@ -140,6 +159,7 @@ function App() {
 
   useEffect(() => {
     if (activeTab !== 'home' && activeTab !== 'explore') return;
+    if (activeTab === 'home' && homeSubTab !== 'verses') return; // Only infinite scroll for verses
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -155,7 +175,7 @@ function App() {
     }
 
     return () => observer.disconnect();
-  }, [loadMoreVerses, activeTab]);
+  }, [loadMoreVerses, activeTab, homeSubTab]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -170,6 +190,97 @@ function App() {
   }, [isSearchExpanded]);
 
 
+  const renderHomeContent = () => {
+    return (
+      <div className="flex flex-col w-full">
+        {/* Home Tab Switcher & Search */}
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8 sticky top-20 md:top-0 z-30 pt-4 md:pt-0 bg-black/95 md:bg-transparent pb-4 md:pb-6">
+            <div className="bg-white/10 backdrop-blur-xl rounded-full p-1 flex items-center border border-white/10 shadow-lg">
+                <button 
+                    onClick={() => setHomeSubTab('verses')}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${homeSubTab === 'verses' ? 'bg-white text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
+                >
+                    <ImageIcon size={16} />
+                    Versículos
+                </button>
+                <button 
+                    onClick={() => setHomeSubTab('videos')}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${homeSubTab === 'videos' ? 'bg-white text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
+                >
+                    <Video size={16} />
+                    Videos
+                </button>
+                <button 
+                    onClick={() => setHomeSubTab('bible')}
+                    className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${homeSubTab === 'bible' ? 'bg-white text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
+                >
+                    <Book size={16} />
+                    Biblia
+                </button>
+            </div>
+            
+            {/* Desktop Home Search */}
+            <div className="hidden md:flex items-center bg-white/5 border border-white/10 rounded-full px-4 py-2 w-64 focus-within:w-80 focus-within:bg-white/10 transition-all duration-300">
+                <Search size={18} className="text-gray-400 mr-2" />
+                <input 
+                    ref={homeSearchInputRef}
+                    type="text" 
+                    placeholder={homeSubTab === 'videos' ? "Buscar videos..." : "Buscar versículos..."}
+                    className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-gray-500"
+                    value={homeSearchQuery}
+                    onChange={(e) => setHomeSearchQuery(e.target.value)}
+                />
+            </div>
+        </div>
+
+        {/* Content based on subtab */}
+        {homeSubTab === 'verses' && (
+             <>
+                {initialLoad && verses.length === 0 && (
+                    <div className="flex flex-col items-center justify-center min-h-[60vh] animate-pulse">
+                        <Loader2 className="w-10 h-10 text-white animate-spin mb-4" />
+                        <p className="text-gray-500 text-sm">Preparando inspiración...</p>
+                    </div>
+                )}
+
+                <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
+                    {verses
+                     .filter(v => !homeSearchQuery || v.text.toLowerCase().includes(homeSearchQuery.toLowerCase()) || v.reference.toLowerCase().includes(homeSearchQuery.toLowerCase()))
+                     .map((verse) => (
+                        <VerseCard 
+                            key={verse.id} 
+                            data={verse} 
+                            isFavorite={isFavorite(verse)}
+                            onToggleFavorite={toggleFavorite}
+                        />
+                    ))}
+                </div>
+
+                <div 
+                    ref={observerTarget} 
+                    className="h-32 flex items-center justify-center w-full mt-10"
+                >
+                    {loading && verses.length > 0 && (
+                        <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Cargando más</span>
+                        </div>
+                    )}
+                </div>
+            </>
+        )}
+
+        {homeSubTab === 'videos' && (
+            <VideoFeed apiKey={YOUTUBE_API_KEY} searchQuery={homeSearchQuery} />
+        )}
+
+        {homeSubTab === 'bible' && (
+            <BibleReader />
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (activeTab === 'create') {
         return <CreateEditor onBack={() => setActiveTab('home')} onSaveDesign={handleSaveDesign} />;
@@ -182,44 +293,13 @@ function App() {
                 favorites={favorites} 
                 user={user} 
                 onUpdateUser={setUser}
+                onLogout={handleLogout}
             /> 
         ) : null;
     }
 
     if (activeTab === 'home') {
-      return (
-        <>
-          {initialLoad && verses.length === 0 && (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] animate-pulse">
-              <Loader2 className="w-10 h-10 text-white animate-spin mb-4" />
-              <p className="text-gray-500 text-sm">Preparando inspiración...</p>
-            </div>
-          )}
-
-          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
-            {verses.map((verse) => (
-              <VerseCard 
-                key={verse.id} 
-                data={verse} 
-                isFavorite={isFavorite(verse)}
-                onToggleFavorite={toggleFavorite}
-              />
-            ))}
-          </div>
-
-          <div 
-            ref={observerTarget} 
-            className="h-32 flex items-center justify-center w-full mt-10"
-          >
-            {loading && verses.length > 0 && (
-              <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest">Cargando más</span>
-              </div>
-            )}
-          </div>
-        </>
-      );
+      return renderHomeContent();
     }
 
     if (activeTab === 'explore') {
@@ -329,37 +409,31 @@ function App() {
                                         </div>
                                     </div>
 
-                                    {/* Floating Actions Outside Right */}
-                                    <div className="absolute right-[calc(50%-280px)] top-1/2 -translate-y-1/2 flex flex-col gap-6 ml-8">
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                                            <div className="p-4 bg-gray-800 rounded-full text-white group-hover:bg-gray-700 transition-colors shadow-lg">
-                                                <Heart size={28} />
-                                            </div>
-                                            <span className="text-xs font-bold text-gray-400">8.5k</span>
+                                    {/* Floating Actions Outside Right (Desktop Updated UI) */}
+                                    <div className="absolute right-[calc(50%-280px)] top-1/2 -translate-y-1/2 flex flex-col gap-8 ml-8">
+                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                            <Heart size={32} className="text-white drop-shadow-lg hover:text-red-500 transition-colors" />
+                                            <span className="text-xs font-bold text-white drop-shadow-md">8.5k</span>
                                         </div>
                                         
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                                            <div className="p-4 bg-gray-800 rounded-full text-white group-hover:bg-gray-700 transition-colors shadow-lg">
-                                                <MessageCircle size={28} />
-                                            </div>
-                                            <span className="text-xs font-bold text-gray-400">124</span>
+                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                            <MessageCircle size={32} className="text-white drop-shadow-lg" />
+                                            <span className="text-xs font-bold text-white drop-shadow-md">124</span>
                                         </div>
 
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer">
+                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); toggleFavorite(verse); }}
-                                                className={`p-4 rounded-full transition-colors shadow-lg ${isFavorite(verse) ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50' : 'bg-gray-800 text-white hover:bg-gray-700'}`}
+                                                className={`transition-colors drop-shadow-lg ${isFavorite(verse) ? 'text-yellow-400' : 'text-white'}`}
                                             >
-                                                <Bookmark size={28} fill={isFavorite(verse) ? "currentColor" : "none"} />
+                                                <Bookmark size={32} fill={isFavorite(verse) ? "currentColor" : "none"} />
                                             </button>
-                                            <span className="text-xs font-bold text-gray-400">Guardar</span>
+                                            <span className="text-xs font-bold text-white drop-shadow-md">Guardar</span>
                                         </div>
 
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                                             <div className="p-4 bg-gray-800 rounded-full text-white group-hover:bg-gray-700 transition-colors shadow-lg">
-                                                <Share2 size={28} />
-                                            </div>
-                                            <span className="text-xs font-bold text-gray-400">Share</span>
+                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                            <Share2 size={32} className="text-white drop-shadow-lg" />
+                                            <span className="text-xs font-bold text-white drop-shadow-md">Share</span>
                                         </div>
                                     </div>
                                 </div>
@@ -400,9 +474,7 @@ function App() {
           {/* --- DESKTOP SIDEBAR --- */}
           <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 flex-col items-center justify-center gap-12 z-50">
             <div className="absolute top-10">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-white/5">
-                  <span className="text-sm font-bold text-black">V</span>
-                </div>
+                <img src="https://iili.io/fh2eSbn.png" alt="Logo" className="w-12 h-12 object-contain drop-shadow-xl hover:scale-110 transition-transform duration-300" />
             </div>
             
             <nav className="flex flex-col items-center gap-10">
@@ -451,12 +523,10 @@ function App() {
           </aside>
 
           {/* --- MOBILE TOP HEADER --- */}
-          {activeTab !== 'create' && activeTab !== 'explore' && (
+          {activeTab !== 'create' && activeTab !== 'explore' && activeTab !== 'home' && (
             <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-center px-4 transition-all duration-300">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg">
-                    <span className="text-xs font-bold text-black">V</span>
-                  </div>
+                  <img src="https://iili.io/fh2eSbn.png" alt="Logo" className="w-9 h-9 object-contain drop-shadow-lg" />
                   <h1 className="text-base font-bold text-white tracking-wide">VERSÍCULOS</h1>
                 </div>
             </header>
@@ -509,12 +579,12 @@ function App() {
           )}
 
           {/* --- MAIN CONTENT --- */}
-          <main className={`${activeTab === 'create' ? 'pt-0 px-0 pb-0 md:pt-10 md:pb-10 md:px-4' : (activeTab === 'explore' ? 'pt-4 px-2 pb-24 md:pt-10 md:px-4' : 'pt-20 pb-24 px-4 md:pt-10 md:pb-10')} md:pl-32 md:pr-8 max-w-[1800px] mx-auto min-h-screen`}>
+          <main className={`${activeTab === 'create' ? 'pt-0 px-0 pb-0 md:pt-10 md:pb-10 md:px-4' : (activeTab === 'explore' || activeTab === 'home' ? 'pt-4 px-2 pb-24 md:pt-10 md:px-4' : 'pt-20 pb-24 px-4 md:pt-10 md:pb-10')} md:pl-32 md:pr-8 max-w-[1800px] mx-auto min-h-screen`}>
             {renderContent()}
           </main>
 
-          {/* Footer / Scroll to Top (Only show on Home) */}
-          {activeTab !== 'create' && activeTab === 'home' && (
+          {/* Footer / Scroll to Top (Only show on Home Verse/Video Tab) */}
+          {activeTab !== 'create' && activeTab === 'home' && homeSubTab !== 'bible' && (
             <div className="fixed bottom-20 right-4 md:bottom-10 md:right-10 z-40">
               <button 
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

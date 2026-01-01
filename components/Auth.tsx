@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { User } from '../types';
@@ -7,6 +7,12 @@ import { Loader2, ArrowRight, Camera, Sparkles, Edit3, Share2, Check } from 'luc
 interface AuthProps {
   onLoginSuccess: (user: User) => void;
 }
+
+const PasskeyIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className} fill="currentColor" height="24" width="24">
+        <path d="M4.5 20c-0.4125 0 -0.765585 -0.1469 -1.05925 -0.44075C3.146915 19.2656 3 18.9125 3 18.5v-0.85c0 -0.63335 0.158335 -1.175 0.475 -1.625 0.316665 -0.45 0.725 -0.79165 1.225 -1.025 1.11665 -0.5 2.1875 -0.875 3.2125 -1.125S9.96665 13.5 11 13.5c0.35 0 0.7 0.0125 1.05 0.0375 0.35 0.025 0.7 0.07085 1.05 0.1375 0.13335 0.03335 0.23335 0.09325 0.3 0.17975 0.06665 0.0865 0.1 0.19325 0.1 0.32025 0 0.83335 0.19165 1.6125 0.575 2.3375 0.38335 0.725 0.91665 1.32085 1.6 1.7875 0.10115 0.06615 0.1806 0.14875 0.23825 0.24775 0.05785 0.09915 0.08675 0.20825 0.08675 0.32725v0.375c0 0.2125 -0.07185 0.3906 -0.2155 0.53425 -0.14385 0.14385 -0.322 0.21575 -0.5345 0.21575H4.5Zm6.5 -8.5c-1.05 0 -1.9375 -0.3625 -2.6625 -1.0875 -0.725 -0.725 -1.0875 -1.6125 -1.0875 -2.6625s0.3625 -1.9375 1.0875 -2.6625C9.0625 4.3625 9.95 4 11 4s1.9375 0.3625 2.6625 1.0875c0.725 0.725 1.0875 1.6125 1.0875 2.6625s-0.3625 1.9375 -1.0875 2.6625C12.9375 11.1375 12.05 11.5 11 11.5Zm7.5 3.175c0.28335 0 0.52085 -0.09585 0.7125 -0.2875S19.5 13.95835 19.5 13.675c0 -0.28335 -0.09585 -0.52085 -0.2875 -0.7125s-0.42915 -0.2875 -0.7125 -0.2875c-0.28335 0 -0.52085 0.09585 -0.7125 0.2875S17.5 13.39165 17.5 13.675c0 0.28335 0.09585 0.52085 0.2875 0.7125s0.42915 0.2875 0.7125 0.2875Zm0.225 8.725 -1.119 -1.119c-0.03735 -0.03735 -0.07265 -0.12265 -0.106 -0.256v-4.4965c-0.73335 -0.219 -1.33335 -0.63265 -1.8 -1.241 -0.46665 -0.60835 -0.7 -1.3125 -0.7 -2.1125 0 -0.96665 0.34165 -1.79165 1.025 -2.475 0.68335 -0.68335 1.50835 -1.025 2.475 -1.025s1.79165 0.34165 2.475 1.025c0.68335 0.68335 1.025 1.50835 1.025 2.475 0 0.75 -0.2125 1.41665 -0.6375 2 -0.425 0.58335 -0.9625 1 -1.6125 1.25l0.975 0.975c0.08335 0.07735 0.125 0.1675 0.125 0.2705 0 0.103 -0.04165 0.19615 -0.125 0.2795l-0.95 0.95c-0.08335 0.07735 -0.125 0.1675 -0.125 0.2705 0 0.103 0.04165 0.19615 0.125 0.2795l0.95 0.95c0.08335 0.07735 0.125 0.1675 0.125 0.2705 0 0.103 -0.04165 0.19615 -0.125 0.2795l-1.45 1.45c-0.07735 0.08335 -0.1675 0.125 -0.2705 0.125 -0.103 0 -0.19615 -0.04165 -0.2795 -0.125Z"></path>
+    </svg>
+);
 
 const LoginCarousel = () => {
     return (
@@ -64,6 +70,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
   const [view, setView] = useState<'splash' | 'login' | 'onboarding'>('splash');
   const [onboardingStep, setOnboardingStep] = useState(0); // 0: Profile Pic, 1: Info, 2: Tutorial
   const [tempUser, setTempUser] = useState<User | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Tutorial Slide State
   const [tutorialIndex, setTutorialIndex] = useState(0);
@@ -129,6 +136,30 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
     onError: () => console.log('Login Failed'),
   });
 
+  const handlePasskeyLogin = () => {
+      // Simulate Passkey/WebAuthn Login Flow
+      // In a real app, this would use navigator.credentials.get() or navigator.credentials.create()
+      
+      // Since Passkey login implies we don't get profile info like Google provides,
+      // we initialize with empty strings so the user can fill them in onboarding.
+      const initialUser: User = {
+          name: "",
+          email: "", // Passkeys usually identify the user, but we'll ask for details or assume known
+          picture: "", 
+          username: "",
+          bio: "Amante de la Palabra ✨"
+      };
+      setTempUser(initialUser);
+      setView('onboarding');
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const url = URL.createObjectURL(e.target.files[0]);
+      setTempUser(prev => prev ? { ...prev, picture: url } : null);
+    }
+  };
+
   const handleComplete = () => {
       if (tempUser) {
           onLoginSuccess(tempUser);
@@ -139,9 +170,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
     return (
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-out fade-out duration-1000 delay-2000 fill-mode-forwards">
         <div className="flex flex-col items-center animate-in zoom-in duration-1000">
-             <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.3)] mb-6">
-                 <span className="text-4xl font-bold text-black">V</span>
-             </div>
+             <img src="https://iili.io/fh2eSbn.png" alt="Logo" className="w-28 h-28 object-contain drop-shadow-[0_0_30px_rgba(255,255,255,0.2)] mb-6" />
              <h1 className="text-3xl font-serif font-bold text-white tracking-widest uppercase">Versículos</h1>
              <h2 className="text-xl font-light text-gray-400 tracking-[0.3em] uppercase mt-2">Eternos</h2>
         </div>
@@ -153,9 +182,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
     return (
       <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
          <div className="w-full max-w-sm flex flex-col items-center gap-2 mb-4">
-             <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg shadow-white/5 mb-4">
-                <span className="text-lg font-bold text-black">V</span>
-             </div>
+             <img src="https://iili.io/fh2eSbn.png" alt="Logo" className="w-20 h-20 object-contain drop-shadow-2xl mb-2" />
              <h1 className="text-2xl font-bold text-white tracking-wide">VERSÍCULOS ETERNOS</h1>
              <p className="text-gray-500 text-sm">Crea. Inspira. Comparte.</p>
          </div>
@@ -163,8 +190,8 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
          {/* 3D Carousel */}
          <LoginCarousel />
 
-         <div className="w-full max-w-sm flex flex-col items-center gap-6 mt-4">
-             {/* Styled Google Button */}
+         <div className="w-full max-w-sm flex flex-col items-center gap-4 mt-4">
+             {/* Google Button */}
              <button 
                 onClick={() => login()}
                 className="w-full py-3.5 px-6 rounded-full border border-white text-white font-bold flex items-center justify-center gap-3 hover:bg-white hover:text-black transition-all duration-300 group"
@@ -174,8 +201,17 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                 </svg>
                 Continuar con Google
              </button>
+
+             {/* Passkey Button */}
+             <button 
+                onClick={handlePasskeyLogin}
+                className="w-full py-3.5 px-6 rounded-full border border-white text-white font-bold flex items-center justify-center gap-3 hover:bg-white hover:text-black transition-all duration-300 group"
+             >
+                <PasskeyIcon className="w-5 h-5 group-hover:text-black transition-colors" />
+                Continuar con Passkey
+             </button>
              
-             <p className="text-xs text-gray-600 text-center max-w-xs leading-relaxed">
+             <p className="text-xs text-gray-600 text-center max-w-xs leading-relaxed mt-2">
                  Al continuar, aceptas inspirar al mundo con la belleza de la palabra.
              </p>
          </div>
@@ -193,16 +229,27 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                <h2 className="text-3xl font-bold">¡Bienvenido!</h2>
                <p className="text-gray-400">Así te verán los demás en la comunidad.</p>
                
-               <div className="relative group cursor-pointer">
-                   <div className="w-32 h-32 rounded-full border-2 border-white/20 p-1">
-                       <img src={tempUser?.picture} alt="Profile" className="w-full h-full rounded-full object-cover" />
+               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                   <div className="w-32 h-32 rounded-full border-2 border-white/20 p-1 bg-white/10 flex items-center justify-center overflow-hidden">
+                       {tempUser?.picture ? (
+                           <img src={tempUser.picture} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                       ) : (
+                           <span className="text-4xl">👤</span>
+                       )}
                    </div>
                    <div className="absolute bottom-0 right-0 bg-white text-black p-2 rounded-full shadow-lg">
                        <Camera size={18} />
                    </div>
                </div>
+               <input 
+                   ref={fileInputRef}
+                   type="file" 
+                   accept="image/*" 
+                   className="hidden" 
+                   onChange={handleImageUpload} 
+               />
                
-               <p className="text-xs text-gray-500">Pulsa para cambiar (Simulado)</p>
+               <p className="text-xs text-gray-500">Pulsa para subir una foto</p>
            </div>
        )}
 
@@ -222,6 +269,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                             value={tempUser?.name}
                             onChange={(e) => setTempUser(prev => prev ? {...prev, name: e.target.value} : null)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-white/50"
+                            placeholder="Tu nombre completo"
                         />
                     </div>
                     <div className="space-y-1">
@@ -233,6 +281,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                                 value={tempUser?.username}
                                 onChange={(e) => setTempUser(prev => prev ? {...prev, username: e.target.value} : null)}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl p-4 pl-8 text-white focus:outline-none focus:border-white/50"
+                                placeholder="usuario"
                             />
                         </div>
                     </div>

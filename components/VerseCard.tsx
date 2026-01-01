@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { VerseCardData } from '../types';
-import { Share2, Heart } from 'lucide-react';
+import { Share2, Heart, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 interface VerseCardProps {
   data: VerseCardData;
@@ -10,6 +11,93 @@ interface VerseCardProps {
 
 export const VerseCard: React.FC<VerseCardProps> = ({ data, isFavorite, onToggleFavorite }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Function to handle High Quality Download
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDownloading) return;
+    setIsDownloading(true);
+
+    // Create a temporary hidden container for high-res rendering
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '1080px'; // High Quality Width
+    container.style.height = '1920px'; // High Quality Height (9:16)
+    container.style.zIndex = '-1';
+    
+    // Render HTML structure into container
+    container.innerHTML = `
+        <div style="position: relative; width: 100%; height: 100%; overflow: hidden; background-color: #111;">
+            <img src="${data.imageUrl}" style="position: absolute; width: 100%; height: 100%; object-fit: cover; opacity: 0.8;" />
+            <div style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.4);"></div>
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 120px 80px; display: flex; flex-direction: column; justify-content: flex-end;">
+                <h1 style="color: white; font-family: 'Merriweather', serif; font-weight: 700; font-size: 80px; line-height: 1.2; text-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 40px;">
+                    “${data.text}”
+                </h1>
+                 <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-family: sans-serif; color: white; background-color: rgba(255,255,255,0.2); padding: 15px 40px; border-radius: 50px; font-size: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;">
+                        ${data.reference}
+                    </span>
+                    <span style="color: rgba(255,255,255,0.6); font-family: sans-serif; text-transform: uppercase; letter-spacing: 3px; font-size: 20px;">
+                        Versículos Eternos
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(container);
+
+    try {
+        // Wait for image to load if needed (though src is cached usually)
+        const img = container.querySelector('img');
+        if (img && !img.complete) {
+             await new Promise((resolve) => { img.onload = resolve; });
+        }
+
+        const canvas = await html2canvas(container, {
+            scale: 1, // Already set to HD dimensions
+            useCORS: true,
+            backgroundColor: null
+        });
+
+        const link = document.createElement('a');
+        link.download = `versiculo-${data.reference.replace(/\s/g, '-')}-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    } catch (err) {
+        console.error("Download failed", err);
+    } finally {
+        document.body.removeChild(container);
+        setIsDownloading(false);
+    }
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Construct share data
+    const shareData = {
+        title: 'Versículos Eternos',
+        text: `"${data.text}" - ${data.reference} 🕊️`,
+        url: window.location.href // Or a specific deep link if implemented
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+        } catch (err) {
+            console.error('Error al compartir:', err);
+        }
+    } else {
+        // Fallback for browsers without share API
+        navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+        alert('Versículo copiado al portapapeles');
+    }
+  };
 
   return (
     <div className={`relative mb-6 break-inside-avoid rounded-3xl overflow-hidden group cursor-zoom-in transition-transform duration-300 hover:-translate-y-1 transform-gpu`}>
@@ -40,7 +128,7 @@ export const VerseCard: React.FC<VerseCardProps> = ({ data, isFavorite, onToggle
               {data.reference}
             </span>
             
-            <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0">
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-4 group-hover:translate-y-0">
               <button 
                 onClick={(e) => { e.stopPropagation(); onToggleFavorite(data); }}
                 className={`p-2 rounded-full backdrop-blur-md transition-colors ${isFavorite ? 'bg-red-500/20 text-red-500' : 'bg-white/10 text-white hover:bg-white/20'}`}
@@ -48,7 +136,20 @@ export const VerseCard: React.FC<VerseCardProps> = ({ data, isFavorite, onToggle
               >
                 <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
               </button>
-              <button className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-colors">
+              
+              <button 
+                onClick={handleDownload}
+                className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-colors"
+                title="Descargar HD (9:16)"
+              >
+                {isDownloading ? <span className="w-4 h-4 block rounded-full border-2 border-white/50 border-t-white animate-spin"/> : <Download size={18} />}
+              </button>
+
+              <button 
+                onClick={handleShare}
+                className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-md transition-colors"
+                title="Compartir"
+              >
                 <Share2 size={18} />
               </button>
             </div>
