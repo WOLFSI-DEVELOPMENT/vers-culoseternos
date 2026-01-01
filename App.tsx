@@ -1,11 +1,15 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { fetchRandomChapterVerses } from './services/bibleService';
-import { VerseCardData, Verse, SavedDesign } from './types';
+import { VerseCardData, Verse, SavedDesign, User } from './types';
 import { VerseCard } from './components/VerseCard';
 import { CreateEditor } from './components/CreateEditor';
 import { Profile } from './components/Profile';
+import { Auth } from './components/Auth';
 import { CARD_HEIGHTS } from './constants';
 import { Loader2, Search, Home, Heart, Compass, BookmarkX, PlusCircle, Rocket, MessageCircle, Share2, Bookmark } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = '7302993140-qgo9bovj97d11d68q7hje32da15bvm14.apps.googleusercontent.com';
 
 const getRandomHeight = () => CARD_HEIGHTS[Math.floor(Math.random() * CARD_HEIGHTS.length)];
 const getRandomImage = (id: string) => `https://picsum.photos/seed/${id}/400/600`;
@@ -15,16 +19,21 @@ const CommunityIcon = ({ size = 24, className = "" }: { size?: number, className
   <svg 
     viewBox="0 0 16 16" 
     fill="currentColor" 
+    stroke="currentColor" 
     xmlns="http://www.w3.org/2000/svg" 
     width={size} 
     height={size} 
     className={className}
+    style={{ overflow: 'visible' }}
   >
-    <path d="M1.3333333333333333 14.666666666666666c0 -2.9455333333333336 2.387813333333333 -5.333333333333333 5.333333333333333 -5.333333333333333 2.9455333333333336 0 5.333333333333333 2.3878 5.333333333333333 5.333333333333333h-1.3333333333333333c0 -2.209133333333333 -1.7908666666666666 -4 -4 -4 -2.2091399999999997 0 -4 1.7908666666666666 -4 4H1.3333333333333333Zm5.333333333333333 -6c-2.21 0 -4 -1.79 -4 -4s1.79 -4 4 -4 4 1.79 4 4 -1.79 4 -4 4Zm0 -1.3333333333333333c1.4733333333333332 0 2.6666666666666665 -1.1933333333333334 2.6666666666666665 -2.6666666666666665s-1.1933333333333334 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 1.1933333333333334 -2.6666666666666665 2.6666666666666665 1.1933333333333334 2.6666666666666665 2.6666666666666665 2.6666666666666665Zm5.522466666666666 2.4685333333333332C14.042933333333332 10.6374 15.333333333333332 12.501333333333331 15.333333333333332 14.666666666666666h-1.3333333333333333c0 -1.6239999999999999 -0.9678 -3.021933333333333 -2.358133333333333 -3.6486l0.5472666666666666 -1.2162Zm-0.4583333333333333 -7.526393333333333C13.062933333333334 2.8246866666666666 14 4.13574 14 5.666666666666666c0 1.9134666666666666 -1.4638666666666666 3.4834666666666667 -3.333333333333333 3.651733333333333v-1.3419999999999999c1.1311333333333333 -0.1616 2 -1.1337333333333333 2 -2.309733333333333 0 -0.9204333333333332 -0.5322666666666667 -1.71598 -1.306 -2.0957666666666666l0.3701333333333333 -1.2954266666666667Z" strokeWidth="0.6667"></path>
+    <path d="M1.3333333333333333 14.666666666666666c0 -2.9455333333333336 2.387813333333333 -5.333333333333333 5.333333333333333 -5.333333333333333 2.9455333333333336 0 5.333333333333333 2.3878 5.333333333333333 5.333333333333333h-1.3333333333333333c0 -2.209133333333333 -1.7908666666666666 -4 -4 -4 -2.2091399999999997 0 -4 1.7908666666666666 -4 4H1.3333333333333333Zm5.333333333333333 -6c-2.21 0 -4 -1.79 -4 -4s1.79 -4 4 -4 4 1.79 4 4 -1.79 4 -4 4Zm0 -1.3333333333333333c1.4733333333333332 0 2.6666666666666665 -1.1933333333333334 2.6666666666666665 -2.6666666666666665s-1.1933333333333334 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 -2.6666666666666665 1.1933333333333334 -2.6666666666666665 2.6666666666666665 1.1933333333333334 2.6666666666666665 2.6666666666666665 2.6666666666666665Zm5.522466666666666 2.4685333333333332C14.042933333333332 10.6374 15.333333333333332 12.501333333333331 15.333333333333332 14.666666666666666h-1.3333333333333333c0 -1.6239999999999999 -0.9678 -3.021933333333333 -2.358133333333333 -3.6486l0.5472666666666666 -1.2162Zm-0.4583333333333333 -7.526393333333333C13.062933333333334 2.8246866666666666 14 4.13574 14 5.666666666666666c0 1.9134666666666666 -1.4638666666666666 3.4834666666666667 -3.333333333333333 3.651733333333333v-1.3419999999999999c1.1311333333333333 -0.1616 2 -1.1337333333333333 2 -2.309733333333333 0 -0.9204333333333332 -0.5322666666666667 -1.71598 -1.306 -2.0957666666666666l0.3701333333333333 -1.2954266666666667Z" strokeWidth="1.2"></path>
   </svg>
 );
 
 function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [verses, setVerses] = useState<VerseCardData[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -46,7 +55,7 @@ function App() {
     }
   });
 
-  // Saved Designs State (Profile)
+  // Saved Designs State
   const [savedDesigns, setSavedDesigns] = useState<SavedDesign[]>(() => {
     try {
         const saved = localStorage.getItem('savedDesigns');
@@ -59,19 +68,24 @@ function App() {
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Sync favorites to localStorage
+  // Sync favorites
   useEffect(() => {
     localStorage.setItem('favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  // Sync saved designs to localStorage
+  // Sync saved designs
   useEffect(() => {
     localStorage.setItem('savedDesigns', JSON.stringify(savedDesigns));
   }, [savedDesigns]);
 
+  // Handle Login
+  const handleLoginSuccess = (userData: User) => {
+      setUser(userData);
+      setIsAuthenticated(true);
+  };
+
   const toggleFavorite = (verse: VerseCardData) => {
     setFavorites(prev => {
-      // Check for existence by reference and text content to handle duplicates/random IDs
       const exists = prev.some(f => f.reference === verse.reference && f.text === verse.text);
       if (exists) {
         return prev.filter(f => !(f.reference === verse.reference && f.text === verse.text));
@@ -93,7 +107,6 @@ function App() {
     setLoading(true);
 
     try {
-      // Simulate network delay for aesthetics if it's too fast
       const minDelay = new Promise(resolve => setTimeout(resolve, 600));
       const [newVerses] = await Promise.all([fetchRandomChapterVerses(), minDelay]);
 
@@ -103,7 +116,6 @@ function App() {
         heightClass: getRandomHeight()
       }));
 
-      // Filter out duplicates just in case
       setVerses(prev => {
         const existingIds = new Set(prev.map(p => p.id));
         const uniqueNew = processedVerses.filter(v => !existingIds.has(v.id));
@@ -117,18 +129,15 @@ function App() {
     }
   }, [loading, activeTab]);
 
-  // Initial Load
   useEffect(() => {
-    if (activeTab === 'home' && verses.length === 0) {
+    if (isAuthenticated && activeTab === 'home' && verses.length === 0) {
       loadMoreVerses();
     }
-    if (activeTab === 'explore' && verses.length === 0) {
+    if (isAuthenticated && activeTab === 'explore' && verses.length === 0) {
         loadMoreVerses();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated]);
 
-  // Infinite Scroll Observer
   useEffect(() => {
     if (activeTab !== 'home' && activeTab !== 'explore') return;
 
@@ -148,7 +157,6 @@ function App() {
     return () => observer.disconnect();
   }, [loadMoreVerses, activeTab]);
 
-  // Handle click outside for search bar collapse
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node) && isSearchExpanded) {
@@ -168,13 +176,19 @@ function App() {
     }
 
     if (activeTab === 'profile') {
-        return <Profile designs={savedDesigns} favorites={favorites} />;
+        return user ? (
+            <Profile 
+                designs={savedDesigns} 
+                favorites={favorites} 
+                user={user} 
+                onUpdateUser={setUser}
+            /> 
+        ) : null;
     }
 
     if (activeTab === 'home') {
       return (
         <>
-          {/* Intro Text */}
           {initialLoad && verses.length === 0 && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] animate-pulse">
               <Loader2 className="w-10 h-10 text-white animate-spin mb-4" />
@@ -182,7 +196,6 @@ function App() {
             </div>
           )}
 
-          {/* Masonry Grid */}
           <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6 space-y-6">
             {verses.map((verse) => (
               <VerseCard 
@@ -194,7 +207,6 @@ function App() {
             ))}
           </div>
 
-          {/* Infinite Scroll Trigger */}
           <div 
             ref={observerTarget} 
             className="h-32 flex items-center justify-center w-full mt-10"
@@ -214,47 +226,49 @@ function App() {
         return (
             <div className="w-full flex flex-col items-center h-[calc(100vh-80px)] md:h-screen">
                 
-                {/* Custom Search & Toggle Header */}
-                <div className="w-full max-w-lg sticky top-0 md:top-4 z-40 md:rounded-full py-4 px-4 flex items-center justify-center relative h-16">
-                     {/* Switcher Pill */}
-                    <div 
-                        className={`absolute flex p-1 bg-white/10 rounded-full backdrop-blur-md transition-all duration-300 transform ${isSearchExpanded ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
-                    >
-                        <button 
-                            onClick={() => setExploreSubTab('posts')}
-                            className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'posts' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                {/* STICKY HEADER */}
+                <div className="sticky top-0 z-40 w-full flex justify-center bg-black/80 backdrop-blur-md pt-4 pb-2 -mt-4">
+                    <div className="w-full max-w-sm rounded-full py-1 flex items-center justify-center relative h-16">
+                        {/* Switcher Pill */}
+                        <div 
+                            className={`absolute flex p-1 bg-white/10 rounded-full backdrop-blur-md transition-all duration-300 transform ${isSearchExpanded ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
                         >
-                            Posts
-                        </button>
-                        <button 
-                             onClick={() => setExploreSubTab('verses')}
-                            className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'verses' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
-                        >
-                            Biblia
-                        </button>
-                    </div>
-                    
-                    {/* Animated Search Button/Bar */}
-                    <div 
-                        ref={searchInputRef as any}
-                        className={`bg-white/10 backdrop-blur-md rounded-full flex items-center transition-all duration-500 ease-apple absolute right-4 ${isSearchExpanded ? 'w-full right-0 left-0 mx-4 pl-4 pr-1 bg-black/60 border border-white/20' : 'w-10 h-10 justify-center hover:bg-white/20 cursor-pointer'}`}
-                        onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
-                    >
-                        <Search size={18} className="text-white shrink-0" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar..."
-                            className={`bg-transparent border-none outline-none text-white text-sm ml-2 w-full ${isSearchExpanded ? 'opacity-100' : 'opacity-0 w-0 pointer-events-none'}`}
-                            autoFocus={isSearchExpanded}
-                        />
-                         {isSearchExpanded && (
                             <button 
-                                onClick={(e) => { e.stopPropagation(); setIsSearchExpanded(false); }}
-                                className="p-2 text-gray-400 hover:text-white"
+                                onClick={() => setExploreSubTab('posts')}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'posts' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
                             >
-                                <BookmarkX size={16} className="rotate-45" />
+                                Posts
                             </button>
-                        )}
+                            <button 
+                                onClick={() => setExploreSubTab('verses')}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'verses' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                            >
+                                Biblia
+                            </button>
+                        </div>
+                        
+                        {/* Animated Search Button/Bar */}
+                        <div 
+                            ref={searchInputRef as any}
+                            className={`bg-white/10 backdrop-blur-md rounded-full flex items-center transition-all duration-500 ease-apple absolute right-4 ${isSearchExpanded ? 'w-full right-0 left-0 mx-4 pl-4 pr-1 bg-black/90 border border-white/20 h-12' : 'w-12 h-12 justify-center hover:bg-white/20 cursor-pointer'}`}
+                            onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
+                        >
+                            <Search size={20} className="text-white shrink-0" />
+                            <input 
+                                type="text" 
+                                placeholder="Buscar..."
+                                className={`bg-transparent border-none outline-none text-white text-sm ml-2 w-full ${isSearchExpanded ? 'opacity-100' : 'opacity-0 w-0 pointer-events-none'}`}
+                                autoFocus={isSearchExpanded}
+                            />
+                            {isSearchExpanded && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setIsSearchExpanded(false); }}
+                                    className="p-2 text-gray-400 hover:text-white"
+                                >
+                                    <BookmarkX size={20} className="rotate-45" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -269,7 +283,7 @@ function App() {
                 ) : (
                     <>
                         {/* Mobile: Grid Layout */}
-                        <div className="md:hidden w-full columns-1 sm:columns-2 gap-4 space-y-4 px-2 pb-20 animate-in fade-in">
+                        <div className="md:hidden w-full columns-1 sm:columns-2 gap-4 space-y-4 px-2 pb-20 animate-in fade-in pt-4">
                             {verses.map((verse) => (
                                 <div key={verse.id + '-explore-mob'} className="relative break-inside-avoid aspect-[9/16] rounded-2xl overflow-hidden bg-gray-900 group">
                                     <img src={verse.imageUrl} className="w-full h-full object-cover" loading="lazy" />
@@ -373,148 +387,148 @@ function App() {
       );
     }
 
-    // Default Fallback
     return null;
   };
 
   return (
-    <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-gray-700 selection:text-white">
-      
-      {/* --- DESKTOP SIDEBAR (Transparent, Left, Bold Icons) --- */}
-      <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 flex-col items-center justify-center gap-12 z-50">
-        <div className="absolute top-10">
-            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-white/5">
-              <span className="text-sm font-bold text-black">V</span>
-            </div>
-        </div>
-        
-        <nav className="flex flex-col items-center gap-10">
-          <button 
-            onClick={() => setActiveTab('home')} 
-            className={`transition-transform hover:scale-110 ${activeTab === 'home' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-            title="Inicio"
-          >
-             <Home size={28} strokeWidth={3} />
-          </button>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {!isAuthenticated ? (
+          <Auth onLoginSuccess={handleLoginSuccess} />
+      ) : (
+        <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-gray-700 selection:text-white">
           
-          <button 
-            onClick={() => setActiveTab('explore')} 
-            className={`transition-transform hover:scale-110 ${activeTab === 'explore' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-            title="Explorar"
-          >
-             <Compass size={28} strokeWidth={3} />
-          </button>
-
-          {/* Create Button (Desktop) */}
-          <button 
-            onClick={() => setActiveTab('create')} 
-            className={`transition-transform hover:scale-110 ${activeTab === 'create' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-            title="Crear"
-          >
-             <PlusCircle size={32} strokeWidth={3} fill={activeTab === 'create' ? "white" : "none"} className={activeTab === 'create' ? 'text-black' : ''} />
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('community')} 
-            className={`transition-transform hover:scale-110 ${activeTab === 'community' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-            title="Comunidad"
-          >
-             <CommunityIcon size={28} />
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('profile')} 
-            className={`transition-transform hover:scale-110 ${activeTab === 'profile' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
-            title="Perfil"
-          >
-              <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-current flex items-center justify-center overflow-hidden">
-                <span className="text-[10px]">👤</span>
-              </div>
-          </button>
-        </nav>
-      </aside>
-
-      {/* --- MOBILE TOP HEADER (Simple Branding) --- */}
-      {/* Hide default header if in create mode or explore mode (explore has its own header) */}
-      {activeTab !== 'create' && activeTab !== 'explore' && (
-        <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-center px-4 transition-all duration-300">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg">
-                <span className="text-xs font-bold text-black">V</span>
-              </div>
-              <h1 className="text-base font-bold text-white tracking-wide">VERSÍCULOS</h1>
+          {/* --- DESKTOP SIDEBAR --- */}
+          <aside className="hidden md:flex fixed top-0 left-0 bottom-0 w-24 flex-col items-center justify-center gap-12 z-50">
+            <div className="absolute top-10">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg shadow-white/5">
+                  <span className="text-sm font-bold text-black">V</span>
+                </div>
             </div>
-        </header>
-      )}
+            
+            <nav className="flex flex-col items-center gap-10">
+              <button 
+                onClick={() => setActiveTab('home')} 
+                className={`transition-transform hover:scale-110 ${activeTab === 'home' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                title="Inicio"
+              >
+                <Home size={28} strokeWidth={3} />
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('explore')} 
+                className={`transition-transform hover:scale-110 ${activeTab === 'explore' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                title="Explorar"
+              >
+                <Compass size={28} strokeWidth={3} />
+              </button>
 
-      {/* --- MOBILE BOTTOM NAV --- */}
-      {/* Hide default nav if in create mode */}
-      {activeTab !== 'create' && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-white/10 h-16 px-4 flex justify-between items-center pb-1 safe-area-pb">
-          <button 
-            onClick={() => setActiveTab('home')} 
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-white' : 'text-gray-600'}`}
-          >
-              <Home size={20} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">Inicio</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('explore')} 
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'explore' ? 'text-white' : 'text-gray-600'}`}
-          >
-              <Compass size={20} strokeWidth={activeTab === 'explore' ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">Explorar</span>
-          </button>
-          
-          {/* Create Button (Mobile) */}
-          <button 
-            onClick={() => setActiveTab('create')} 
-            className={`flex flex-col items-center justify-center -mt-6`}
-          >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-black transition-all ${activeTab === 'create' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>
-                  <PlusCircle size={24} strokeWidth={2.5} />
-              </div>
-          </button>
+              <button 
+                onClick={() => setActiveTab('create')} 
+                className={`transition-transform hover:scale-110 ${activeTab === 'create' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                title="Crear"
+              >
+                <PlusCircle size={32} strokeWidth={3} fill={activeTab === 'create' ? "white" : "none"} className={activeTab === 'create' ? 'text-black' : ''} />
+              </button>
 
-          <button 
-            onClick={() => setActiveTab('community')} 
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'community' ? 'text-white' : 'text-gray-600'}`}
-          >
-             <CommunityIcon size={20} />
-              <span className="text-[10px] font-medium">Comunidad</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('profile')} 
-            className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-white' : 'text-gray-600'}`}
-          >
-              <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center overflow-hidden">
-                <span className="text-[8px]">👤</span>
-              </div>
-              <span className="text-[10px] font-medium">Perfil</span>
-          </button>
-        </nav>
-      )}
+              <button 
+                onClick={() => setActiveTab('community')} 
+                className={`transition-transform hover:scale-110 ${activeTab === 'community' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                title="Comunidad"
+              >
+                <CommunityIcon size={28} />
+              </button>
 
-      {/* --- MAIN CONTENT --- */}
-      {/* Adjusted padding for desktop to accommodate left sidebar. Remove padding if create mode on mobile */}
-      <main className={`${activeTab === 'create' ? 'pt-0 px-0 pb-0 md:pt-10 md:pb-10 md:px-4' : (activeTab === 'explore' ? 'pt-4 px-2 pb-24 md:pt-10 md:px-4' : 'pt-20 pb-24 px-4 md:pt-10 md:pb-10')} md:pl-32 md:pr-8 max-w-[1800px] mx-auto min-h-screen`}>
-        {renderContent()}
-      </main>
+              <button 
+                onClick={() => setActiveTab('profile')} 
+                className={`transition-transform hover:scale-110 ${activeTab === 'profile' ? 'text-white' : 'text-gray-500 hover:text-white'}`}
+                title="Perfil"
+              >
+                  <div className="w-8 h-8 rounded-full bg-gray-800 border-2 border-current flex items-center justify-center overflow-hidden">
+                    {user?.picture ? <img src={user.picture} alt="User" className="w-full h-full object-cover" /> : <span className="text-[10px]">👤</span>}
+                  </div>
+              </button>
+            </nav>
+          </aside>
 
-      {/* Footer / Scroll to Top (Only show on Home) */}
-      {activeTab !== 'create' && activeTab === 'home' && (
-        <div className="fixed bottom-20 right-4 md:bottom-10 md:right-10 z-40">
-          <button 
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/10 flex items-center justify-center text-white transition-all shadow-lg"
-              title="Volver arriba"
-          >
-            ↑
-          </button>
+          {/* --- MOBILE TOP HEADER --- */}
+          {activeTab !== 'create' && activeTab !== 'explore' && (
+            <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/10 h-14 flex items-center justify-center px-4 transition-all duration-300">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg">
+                    <span className="text-xs font-bold text-black">V</span>
+                  </div>
+                  <h1 className="text-base font-bold text-white tracking-wide">VERSÍCULOS</h1>
+                </div>
+            </header>
+          )}
+
+          {/* --- MOBILE BOTTOM NAV --- */}
+          {activeTab !== 'create' && (
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-white/10 h-16 px-4 flex justify-between items-center pb-1 safe-area-pb">
+              <button 
+                onClick={() => setActiveTab('home')} 
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-white' : 'text-gray-600'}`}
+              >
+                  <Home size={20} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
+                  <span className="text-[10px] font-medium">Inicio</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('explore')} 
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'explore' ? 'text-white' : 'text-gray-600'}`}
+              >
+                  <Compass size={20} strokeWidth={activeTab === 'explore' ? 2.5 : 2} />
+                  <span className="text-[10px] font-medium">Explorar</span>
+              </button>
+              
+              <button 
+                onClick={() => setActiveTab('create')} 
+                className={`flex flex-col items-center justify-center -mt-6`}
+              >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-black transition-all ${activeTab === 'create' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>
+                      <PlusCircle size={24} strokeWidth={2.5} />
+                  </div>
+              </button>
+
+              <button 
+                onClick={() => setActiveTab('community')} 
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'community' ? 'text-white' : 'text-gray-600'}`}
+              >
+                <CommunityIcon size={20} />
+                  <span className="text-[10px] font-medium">Comunidad</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('profile')} 
+                className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-white' : 'text-gray-600'}`}
+              >
+                  <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center overflow-hidden">
+                    {user?.picture ? <img src={user.picture} alt="User" className="w-full h-full object-cover" /> : <span className="text-[8px]">👤</span>}
+                  </div>
+                  <span className="text-[10px] font-medium">Perfil</span>
+              </button>
+            </nav>
+          )}
+
+          {/* --- MAIN CONTENT --- */}
+          <main className={`${activeTab === 'create' ? 'pt-0 px-0 pb-0 md:pt-10 md:pb-10 md:px-4' : (activeTab === 'explore' ? 'pt-4 px-2 pb-24 md:pt-10 md:px-4' : 'pt-20 pb-24 px-4 md:pt-10 md:pb-10')} md:pl-32 md:pr-8 max-w-[1800px] mx-auto min-h-screen`}>
+            {renderContent()}
+          </main>
+
+          {/* Footer / Scroll to Top (Only show on Home) */}
+          {activeTab !== 'create' && activeTab === 'home' && (
+            <div className="fixed bottom-20 right-4 md:bottom-10 md:right-10 z-40">
+              <button 
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-lg border border-white/10 flex items-center justify-center text-white transition-all shadow-lg"
+                  title="Volver arriba"
+              >
+                ↑
+              </button>
+            </div>
+          )}
+
         </div>
       )}
-
-    </div>
+    </GoogleOAuthProvider>
   );
 }
 

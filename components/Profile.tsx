@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { SavedDesign, VerseCardData } from '../types';
-import { Grid, Settings, Bookmark, Heart } from 'lucide-react';
+import { SavedDesign, VerseCardData, User } from '../types';
+import { Grid, Settings, Bookmark, Check, X, Camera } from 'lucide-react';
 
 const FONTS = [
   { name: 'Moderno', family: 'Montserrat, sans-serif' },
@@ -19,10 +19,85 @@ const FONTS = [
 interface ProfileProps {
   designs: SavedDesign[];
   favorites: VerseCardData[];
+  user: User;
+  onUpdateUser: (user: User) => void;
 }
 
-export const Profile: React.FC<ProfileProps> = ({ designs, favorites }) => {
+export const Profile: React.FC<ProfileProps> = ({ designs, favorites, user, onUpdateUser }) => {
   const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<User>(user);
+
+  const handleSaveProfile = () => {
+    onUpdateUser(editForm);
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm(user);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+      return (
+          <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 animate-in fade-in">
+              <div className="w-full max-w-md bg-zinc-900 rounded-3xl border border-white/10 p-8 shadow-2xl relative">
+                  <button onClick={handleCancelEdit} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+                      <X size={24} />
+                  </button>
+                  
+                  <h2 className="text-2xl font-bold text-white mb-6 text-center">Editar Perfil</h2>
+                  
+                  <div className="flex flex-col items-center mb-6 relative group">
+                        <div className="w-24 h-24 rounded-full border-2 border-white/20 p-1 mb-2">
+                             <img src={editForm.picture} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                        </div>
+                        <p className="text-xs text-gray-500">Foto de Google (No editable)</p>
+                  </div>
+
+                  <div className="space-y-4">
+                      <div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-2">Nombre</label>
+                          <input 
+                              type="text" 
+                              value={editForm.name}
+                              onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-white/50"
+                          />
+                      </div>
+                      <div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-2">Usuario</label>
+                          <div className="relative">
+                              <span className="absolute left-3 top-3 text-gray-400">@</span>
+                              <input 
+                                  type="text" 
+                                  value={editForm.username}
+                                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                                  className="w-full bg-white/5 border border-white/10 rounded-xl p-3 pl-8 text-white focus:outline-none focus:border-white/50"
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-gray-500 ml-2">Biografía</label>
+                          <textarea 
+                              rows={3}
+                              value={editForm.bio}
+                              onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-white/50"
+                          />
+                      </div>
+                  </div>
+
+                  <button 
+                      onClick={handleSaveProfile}
+                      className="w-full mt-8 py-3 bg-white text-black rounded-full font-bold flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+                  >
+                      <Check size={18} /> Guardar Cambios
+                  </button>
+              </div>
+          </div>
+      );
+  }
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
@@ -31,16 +106,23 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites }) => {
         {/* Avatar */}
         <div className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 p-[2px]">
           <div className="w-full h-full rounded-full bg-black border-4 border-black flex items-center justify-center overflow-hidden">
-             <span className="text-4xl">👤</span>
+             {user.picture ? (
+                 <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
+             ) : (
+                 <span className="text-4xl">👤</span>
+             )}
           </div>
         </div>
 
         {/* Info */}
         <div className="flex-1 text-center md:text-left">
           <div className="flex flex-col md:flex-row items-center gap-4 mb-4">
-            <h2 className="text-2xl font-bold text-white">usuario_creativo</h2>
+            <h2 className="text-2xl font-bold text-white">{user.username ? `@${user.username}` : user.name}</h2>
             <div className="flex gap-2">
-                <button className="px-4 py-1.5 bg-white text-black text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+                <button 
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-1.5 bg-white text-black text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                >
                 Editar perfil
                 </button>
                 <button className="p-1.5 text-white hover:bg-white/10 rounded-lg transition-colors">
@@ -65,9 +147,8 @@ export const Profile: React.FC<ProfileProps> = ({ designs, favorites }) => {
           </div>
 
           <div className="text-sm">
-            <h3 className="font-bold text-white">Amante de la Palabra</h3>
-            <p className="text-gray-300">Creando versículos eternos para compartir luz. ✨</p>
-            <p className="text-blue-400 hover:underline cursor-pointer">versiculoseternos.app</p>
+            <h3 className="font-bold text-white">{user.name}</h3>
+            <p className="text-gray-300">{user.bio}</p>
           </div>
         </div>
       </div>

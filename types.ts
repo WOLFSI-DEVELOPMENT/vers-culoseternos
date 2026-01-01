@@ -35,3 +35,11 @@ export interface SavedDesign {
   bgImage: string | null;
   timestamp: number;
 }
+
+export interface User {
+  name: string;
+  email: string;
+  picture: string;
+  username: string;
+  bio?: string;
+}

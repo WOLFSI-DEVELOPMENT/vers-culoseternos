@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Download, Image as ImageIcon, Type, Sparkles, Upload, ArrowLeft, X, Save, ChevronLeft, ArrowUp, Check, Smile, Search, Film, Loader2, ChevronDown, Sticker, Sliders, Zap, Droplet, RectangleVertical, RectangleHorizontal } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { Onboarding } from './Onboarding';
 import { SavedDesign } from '../types';
 
 const GIPHY_API_KEY = 'ZLSxKuCFZ91nkajXrfGYq6dYX49WVED2';
@@ -138,7 +137,6 @@ const GlassSlider = ({ value, min, max, onChange, label }: { value: number, min:
 
 
 export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign }) => {
-  const [showOnboarding, setShowOnboarding] = useState(false);
   
   // Design State
   const [text, setText] = useState('Todo lo puedo en Cristo que me fortalece.');
@@ -187,18 +185,6 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
   // Mobile Specific State
   const [activeMobileTool, setActiveMobileTool] = useState<'text' | 'bg' | 'stickers' | 'gifs' | 'filters' | 'sharpen' | null>(null);
-
-  useEffect(() => {
-    const hasSeen = localStorage.getItem('hasSeenCreateOnboarding');
-    if (!hasSeen) {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenCreateOnboarding', 'true');
-    setShowOnboarding(false);
-  };
 
   // --- ASYNC SEARCH ---
   const searchGiphy = async () => {
@@ -457,8 +443,8 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
   // --- RENDER HELPERS ---
   
-  const renderAspectRatioSwitcher = () => (
-      <div className="absolute top-20 left-0 right-0 z-40 flex justify-center pointer-events-none">
+  const renderAspectRatioSwitcher = (isMobile: boolean = false) => (
+      <div className={`${isMobile ? 'absolute top-20 left-0 right-0 z-40' : 'mb-6 relative z-10'} flex justify-center pointer-events-none`}>
           <div className="bg-black/30 backdrop-blur-md rounded-full p-1 flex items-center pointer-events-auto border border-white/10">
               <button 
                   onClick={() => setAspectRatio('9:16')}
@@ -828,10 +814,6 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     </div>
   );
 
-  if (showOnboarding) {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
-
   // --- MOBILE RENDER ---
   const renderMobileEditor = () => (
     <div className="fixed inset-0 z-[60] bg-black flex flex-col md:hidden">
@@ -854,7 +836,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         </div>
       </div>
       
-      {renderAspectRatioSwitcher()}
+      {renderAspectRatioSwitcher(true)}
 
       {/* Main Preview Area */}
       <div className="flex-1 flex items-center justify-center bg-gray-900/50 overflow-hidden pt-24 pb-20" onClick={() => setActiveMobileTool(null)}>
@@ -1064,10 +1046,11 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
   const renderDesktopEditor = () => (
     <div className="hidden md:flex relative w-full min-h-[85vh] items-center justify-center pr-[400px]">
       
-      {renderAspectRatioSwitcher()}
-
-      <div className={`transform transition-all duration-500 ${aspectRatio === '16:9' ? 'scale-75' : 'scale-90 xl:scale-100'}`}>
-        {renderPreviewCard()}
+      <div className="flex flex-col items-center">
+          {renderAspectRatioSwitcher(false)}
+          <div className={`transform transition-all duration-500 ${aspectRatio === '16:9' ? 'scale-75' : 'scale-90 xl:scale-100'}`}>
+            {renderPreviewCard()}
+          </div>
       </div>
 
       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[380px] bg-zinc-900/80 backdrop-blur-2xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl animate-in fade-in slide-in-from-right-10 duration-700">
