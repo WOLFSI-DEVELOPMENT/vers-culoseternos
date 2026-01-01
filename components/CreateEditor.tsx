@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Download, Image as ImageIcon, Type, Sparkles, Upload, ArrowLeft, X, Save, ChevronLeft, ArrowUp, Check, Smile, Search, Film, Loader2, ChevronDown, Sticker, Sliders, Zap, Droplet, RectangleVertical, RectangleHorizontal } from 'lucide-react';
+import { Download, Image as ImageIcon, Type, Sparkles, Upload, ArrowLeft, X, Save, ChevronLeft, ArrowUp, Check, Smile, Search, Film, Loader2, ChevronDown, Sticker, Sliders, Zap, Droplet, RectangleVertical, RectangleHorizontal, Heart, ExternalLink, AlignLeft, AlignCenter, AlignRight, Sun, Move, Palette, Grid, Layers } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { SavedDesign } from '../types';
 
@@ -22,7 +22,7 @@ const FONTS = [
 
 const COLOR_PALETTE = [
   '#FFFFFF', '#000000', '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', 
-  '#0000FF', '#4B0082', '#9400D3', '#FF1493', '#00CED1', '#FFD700',
+  '#00FF00', '#0000FF', '#4B0082', '#9400D3', '#FF1493', '#00CED1', '#FFD700',
   '#FF69B4', '#8A2BE2', '#32CD32', '#00FA9A', '#1E90FF', '#FF4500'
 ];
 
@@ -36,6 +36,14 @@ const FILTERS = [
   { name: 'Cold', value: 'hue-rotate(180deg) sepia(20%)' },
   { name: 'Warm', value: 'sepia(30%) saturate(140%) hue-rotate(-10deg)' },
   { name: 'Dramatic', value: 'contrast(150%) saturate(110%)' },
+];
+
+const TEXTURES = [
+    { name: 'Ninguna', value: 'none', style: {} },
+    { name: 'Ruido', value: 'noise', style: { backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.5'/%3E%3C/svg%3E")`, mixBlendMode: 'overlay', opacity: 0.3 } },
+    { name: 'Papel', value: 'paper', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")', mixBlendMode: 'multiply', opacity: 0.6 } },
+    { name: 'Polvo', value: 'dust', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/dust.png")', mixBlendMode: 'screen', opacity: 0.4 } },
+    { name: 'Lienzo', value: 'canvas', style: { backgroundImage: 'url("https://www.transparenttextures.com/patterns/canvas-orange.png")', mixBlendMode: 'overlay', opacity: 0.3 } },
 ];
 
 const EMOJIS = ["❤️", "🙏", "✨", "🕊️", "✝️", "🙌", "🌿", "📖", "🔥", "💡", "👑", "🦁", "🐑", "☁️", "🌟", "🌹", "⛪", "🍇", "🍞", "🛡️"];
@@ -100,7 +108,7 @@ const GlassSlider = ({ value, min, max, onChange, label }: { value: number, min:
              {label && (
                 <div className="flex justify-between text-xs text-gray-300 uppercase font-bold mb-3 tracking-widest pl-1">
                     <span>{label}</span>
-                    <span>{value}%</span>
+                    <span>{value}</span>
                 </div>
              )}
             <div 
@@ -148,17 +156,33 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
   const [overlays, setOverlays] = useState<Overlay[]>([]);
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
   
-  // Advanced Visuals
+  // --- ADVANCED VISUALS STATE ---
+  
+  // Text Styling
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right'>('center');
+  const [textOpacity, setTextOpacity] = useState(100); 
+  const [letterSpacing, setLetterSpacing] = useState(0); // -2 to 10
+  const [textShadowLevel, setTextShadowLevel] = useState(50); // 0 to 100
+
+  // Image Adjustments (Replacing simple Sharpen)
   const [selectedFilter, setSelectedFilter] = useState('none');
-  const [sharpenLevel, setSharpenLevel] = useState(0); // 0 to 100
-  const [textOpacity, setTextOpacity] = useState(100); // 0 to 100
   const [bgOverlayOpacity, setBgOverlayOpacity] = useState(40); // 0 to 100
+  const [blurLevel, setBlurLevel] = useState(0); // 0 to 20
+  const [brightness, setBrightness] = useState(100); // 0 to 200
+  const [contrast, setContrast] = useState(100); // 0 to 200
+  const [saturation, setSaturation] = useState(100); // 0 to 200
+  const [vignetteStrength, setVignetteStrength] = useState(0); // 0 to 100
+  
+  // Textures
+  const [selectedTexture, setSelectedTexture] = useState<string>('none');
   
   // UI State
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadMode, setDownloadMode] = useState<'png' | 'gif' | 'mp4'>('png');
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [pendingDownloadFormat, setPendingDownloadFormat] = useState<'png' | 'gif' | 'mp4' | null>(null);
 
   // Generator State
   const [isGradientMode, setIsGradientMode] = useState(false);
@@ -184,7 +208,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mobile Specific State
-  const [activeMobileTool, setActiveMobileTool] = useState<'text' | 'bg' | 'stickers' | 'gifs' | 'filters' | 'sharpen' | null>(null);
+  const [activeMobileTool, setActiveMobileTool] = useState<'text' | 'bg' | 'adjust' | 'texture' | 'stickers' | 'gifs' | 'filters' | null>(null);
 
   // --- ASYNC SEARCH ---
   const searchGiphy = async () => {
@@ -318,12 +342,20 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     alert('Diseño guardado en tu perfil');
   };
 
-  const triggerDownload = async (format: 'png' | 'gif' | 'mp4') => {
-    if (!captureRef.current) return;
+  const initiateDownloadSequence = (format: 'png' | 'gif' | 'mp4') => {
+      setPendingDownloadFormat(format);
+      setShowSupportModal(true);
+      setIsDownloadMenuOpen(false);
+  };
+
+  const executeDownload = async () => {
+    const format = pendingDownloadFormat;
+    if (!captureRef.current || !format) return;
+    
+    setShowSupportModal(false);
     setIsDownloading(true);
     setDownloadMode(format);
     setDownloadProgress(0);
-    setIsDownloadMenuOpen(false);
 
     // Standard PNG export
     if (format === 'png') {
@@ -332,6 +364,14 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                 scale: 3, 
                 useCORS: true, 
                 backgroundColor: null,
+                // IMPORTANT: Clone the document and remove border radius to ensure sharp corners on download
+                onclone: (documentClone) => {
+                    const element = documentClone.querySelector('.capture-target') as HTMLElement;
+                    if (element) {
+                        element.style.borderRadius = '0px';
+                        element.style.boxShadow = 'none'; // Optional: remove shadow for cleaner download
+                    }
+                }
             });
 
             const link = document.createElement('a');
@@ -345,6 +385,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
             setTimeout(() => {
                 setIsDownloading(false);
                 setDownloadProgress(0);
+                setPendingDownloadFormat(null);
             }, 1000);
         }
         return;
@@ -359,7 +400,14 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         const sourceCanvas = await html2canvas(captureRef.current, {
             scale: 2,
             useCORS: true,
-            backgroundColor: null
+            backgroundColor: null,
+             onclone: (documentClone) => {
+                const element = documentClone.querySelector('.capture-target') as HTMLElement;
+                if (element) {
+                    element.style.borderRadius = '0px';
+                    element.style.boxShadow = 'none';
+                }
+            }
         });
         
         // 2. Setup recording canvas
@@ -389,6 +437,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
             a.click();
             setIsDownloading(false);
             setDownloadProgress(100);
+            setPendingDownloadFormat(null);
         };
 
         // 4. Animation Loop (Ken Burns Effect)
@@ -428,6 +477,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         console.error("Video export failed", err);
         alert("Tu navegador no soporta la grabación de video. Intenta con Chrome o Firefox.");
         setIsDownloading(false);
+        setPendingDownloadFormat(null);
     }
   };
 
@@ -506,6 +556,71 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
   // --- RENDER HELPERS ---
   
+  const renderSupportModal = () => {
+    if (!showSupportModal) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                <button 
+                    onClick={() => setShowSupportModal(false)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-white"
+                >
+                    <X size={20} />
+                </button>
+                
+                <div className="mb-4 flex justify-center">
+                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+                        <Heart size={32} className="text-red-500 fill-current animate-pulse" />
+                    </div>
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-2">Mantén viva la App</h3>
+                <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+                    Tu apoyo nos ayuda a seguir inspirando al mundo. ¡Gracias por ser parte de esto!
+                </p>
+
+                <div className="space-y-3 mb-6">
+                    <a 
+                        href="https://venmo.com/u/rocioramirezpena" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 bg-[#008CFF]/10 border border-[#008CFF]/20 rounded-xl hover:bg-[#008CFF]/20 transition-colors group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="font-bold text-[#008CFF]">Apóyanos en Venmo</span>
+                        </div>
+                        <ExternalLink size={16} className="text-[#008CFF] opacity-50 group-hover:opacity-100" />
+                    </a>
+                    
+                    <a 
+                        href="https://www.tiktok.com/@rocioramirezpena" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-3 bg-pink-500/10 border border-pink-500/20 rounded-xl hover:bg-pink-500/20 transition-colors group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="font-bold text-pink-500">Síguenos en TikTok</span>
+                        </div>
+                        <ExternalLink size={16} className="text-pink-500 opacity-50 group-hover:opacity-100" />
+                    </a>
+                </div>
+
+                <button 
+                    onClick={executeDownload}
+                    className="w-full py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-colors"
+                >
+                    Continuar a Descargar
+                </button>
+                <div className="mt-3 text-[10px] text-gray-500">
+                    @rocioramirezpena
+                </div>
+            </div>
+        </div>
+    );
+  };
+
   const renderAspectRatioSwitcher = (isMobile: boolean = false) => (
       <div className={`${isMobile ? 'absolute top-20 left-0 right-0 z-40' : 'mb-6 relative z-10'} flex justify-center pointer-events-none`}>
           <div className="bg-black/30 backdrop-blur-md rounded-full p-1 flex items-center pointer-events-auto border border-white/10">
@@ -627,7 +742,8 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     >
         <div 
           ref={captureRef}
-          className={`relative rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center p-8 text-center mx-auto touch-none select-none transition-all duration-500 ease-in-out ${aspectRatio === '9:16' ? 'w-[320px] h-[569px] sm:w-[360px] sm:h-[640px]' : 'w-[569px] h-[320px] sm:w-[640px] sm:h-[360px]'}`}
+          // Added 'capture-target' class to identify this element during html2canvas onclone
+          className={`capture-target relative rounded-[3rem] overflow-hidden shadow-2xl flex items-center justify-center p-8 text-center mx-auto touch-none select-none transition-all duration-500 ease-in-out ${aspectRatio === '9:16' ? 'w-[320px] h-[569px] sm:w-[360px] sm:h-[640px]' : 'w-[569px] h-[320px] sm:w-[640px] sm:h-[360px]'}`}
           style={{
             background: bgType === 'gradient' ? gradient : 'transparent',
           }}
@@ -643,7 +759,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                     alt="Background" 
                     className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-all duration-300"
                     style={{ 
-                        filter: `${selectedFilter} contrast(${100 + (sharpenLevel * 0.5)}%) saturate(${100 + (sharpenLevel * 0.3)}%)` 
+                        filter: `${selectedFilter} blur(${blurLevel}px) brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)` 
                     }} 
                 />
                 <div 
@@ -653,14 +769,39 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
             </>
           )}
 
+          {/* Vignette Overlay */}
+          <div 
+            className="absolute inset-0 pointer-events-none z-[5]"
+            style={{
+                background: `radial-gradient(circle, transparent 50%, rgba(0,0,0, ${vignetteStrength / 100}))`
+            }}
+          />
+
+          {/* Texture Overlay */}
+          {selectedTexture !== 'none' && (
+              <div 
+                className="absolute inset-0 pointer-events-none z-[6] mix-blend-overlay"
+                style={{
+                    ...TEXTURES.find(t => t.value === selectedTexture)?.style
+                }}
+              />
+          )}
+
           {/* Main Text Layer (Below Overlays) */}
           <div 
-            className="relative z-10 text-white drop-shadow-lg pointer-events-none select-none transition-opacity duration-300"
-            style={{ opacity: textOpacity / 100 }}
+            className="relative z-10 text-white drop-shadow-lg pointer-events-none select-none transition-opacity duration-300 w-full"
+            style={{ 
+                opacity: textOpacity / 100,
+                textAlign: textAlign
+            }}
           >
             <h2 
               className="text-2xl sm:text-3xl font-bold mb-4 leading-relaxed"
-              style={{ fontFamily: FONTS[fontIndex].family }}
+              style={{ 
+                  fontFamily: FONTS[fontIndex].family,
+                  letterSpacing: `${letterSpacing}px`,
+                  textShadow: `0px 4px ${textShadowLevel/2}px rgba(0,0,0, ${textShadowLevel/100})`
+              }}
             >
               {text}
             </h2>
@@ -715,14 +856,14 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
           {isDownloadMenuOpen ? (
                <div className="absolute bottom-0 left-0 right-0 bg-zinc-800 rounded-3xl p-2 border border-white/10 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <button 
-                        onClick={() => triggerDownload('png')} 
+                        onClick={() => initiateDownloadSequence('png')} 
                         className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl text-white font-medium flex items-center justify-between"
                     >
                         <span>Imagen PNG</span>
                         <ImageIcon size={16} className="text-gray-400" />
                     </button>
                     <button 
-                        onClick={() => triggerDownload('mp4')}
+                        onClick={() => initiateDownloadSequence('mp4')}
                         className="w-full text-left px-4 py-3 hover:bg-white/10 rounded-xl text-white font-medium flex items-center justify-between"
                     >
                         <span>Video MP4 (Zoom Effect)</span>
@@ -862,26 +1003,87 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     </div>
   );
 
-  const renderSharpenTool = () => (
+  const renderAdjustTool = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
-        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-            <div className="flex items-center gap-3 mb-6 text-white">
-                <Zap className="text-yellow-400" />
-                <h3 className="font-bold text-lg">Mejorar Detalles</h3>
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 mb-2 text-white">
+                <Sliders className="text-blue-400" />
+                <h3 className="font-bold text-lg">Ajustes Pro</h3>
             </div>
             
-            <div className="space-y-6">
-                <div>
-                    <GlassSlider 
-                        label="Intensidad"
-                        min={0} max={100}
-                        value={sharpenLevel}
-                        onChange={(val) => setSharpenLevel(val)}
-                    />
-                </div>
-                <p className="text-xs text-gray-500">
-                    Aumenta el contraste y la saturación para dar más definición a tu imagen de fondo.
-                </p>
+            <GlassSlider label="Desenfoque (Blur)" min={0} max={20} value={blurLevel} onChange={setBlurLevel} />
+            <GlassSlider label="Brillo" min={0} max={200} value={brightness} onChange={setBrightness} />
+            <GlassSlider label="Contraste" min={0} max={200} value={contrast} onChange={setContrast} />
+            <GlassSlider label="Saturación" min={0} max={200} value={saturation} onChange={setSaturation} />
+            <GlassSlider label="Viñeta" min={0} max={100} value={vignetteStrength} onChange={setVignetteStrength} />
+        </div>
+    </div>
+  );
+
+  const renderTexturesTool = () => (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+          <div className="flex items-center gap-3 mb-2 text-white">
+                <Layers className="text-orange-400" />
+                <h3 className="font-bold text-lg">Texturas Vintage</h3>
+            </div>
+          <div className="grid grid-cols-3 gap-3">
+              {TEXTURES.map(texture => (
+                  <button
+                      key={texture.value}
+                      onClick={() => setSelectedTexture(texture.value)}
+                      className={`aspect-square rounded-xl border relative overflow-hidden transition-all ${selectedTexture === texture.value ? 'border-white ring-2 ring-white ring-offset-2 ring-offset-black' : 'border-white/10 hover:border-white/50 bg-white/5'}`}
+                  >
+                      {/* Preview of texture */}
+                      <div className="absolute inset-0 bg-gray-700" />
+                      {texture.value !== 'none' && (
+                           <div className="absolute inset-0" style={texture.style} />
+                      )}
+                      <span className="absolute bottom-2 left-0 right-0 text-center text-xs font-bold text-white z-10">{texture.name}</span>
+                  </button>
+              ))}
+          </div>
+      </div>
+  );
+
+  const renderTextTools = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+        {/* Alignment */}
+        <div className="bg-white/5 rounded-xl p-2 flex justify-between">
+             <button onClick={() => setTextAlign('left')} className={`p-2 rounded-lg flex-1 flex justify-center ${textAlign === 'left' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}><AlignLeft size={20}/></button>
+             <button onClick={() => setTextAlign('center')} className={`p-2 rounded-lg flex-1 flex justify-center ${textAlign === 'center' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}><AlignCenter size={20}/></button>
+             <button onClick={() => setTextAlign('right')} className={`p-2 rounded-lg flex-1 flex justify-center ${textAlign === 'right' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}><AlignRight size={20}/></button>
+        </div>
+
+        <GlassSlider label="Espaciado" min={-2} max={10} value={letterSpacing} onChange={setLetterSpacing} />
+        <GlassSlider label="Sombra" min={0} max={100} value={textShadowLevel} onChange={setTextShadowLevel} />
+        <GlassSlider label="Opacidad" min={0} max={100} value={textOpacity} onChange={setTextOpacity} />
+
+        <div className="space-y-2">
+            <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Contenido</label>
+            <textarea 
+                value={text} onChange={(e) => setText(e.target.value)} rows={3}
+                className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-3 text-white focus:outline-none"
+                placeholder="Escribe tu versículo..."
+            />
+             <input 
+                type="text" value={reference} onChange={(e) => setReference(e.target.value)}
+                className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-3 text-white focus:outline-none"
+                placeholder="Referencia..."
+            />
+        </div>
+
+        <div className="space-y-2">
+            <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Tipografía</label>
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                {FONTS.map((font, idx) => (
+                    <button
+                        key={font.name} onClick={() => setFontIndex(idx)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm border transition-all ${fontIndex === idx ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-300 border-white/10'}`}
+                        style={{ fontFamily: font.family }}
+                    >
+                        {font.name}
+                    </button>
+                ))}
             </div>
         </div>
     </div>
@@ -926,10 +1128,10 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                       <h3 className="text-xl font-bold text-white">Guardar como...</h3>
                       <button onClick={() => setIsDownloadMenuOpen(false)}><X className="text-gray-400" /></button>
                   </div>
-                  <button onClick={() => triggerDownload('png')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
+                  <button onClick={() => initiateDownloadSequence('png')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
                       <ImageIcon className="text-green-400" /> PNG de Alta Calidad
                   </button>
-                  <button onClick={() => triggerDownload('mp4')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
+                  <button onClick={() => initiateDownloadSequence('mp4')} className="w-full p-4 bg-white/5 rounded-xl flex items-center gap-4 text-white font-bold border border-white/10">
                       <Film className="text-blue-400" /> Video MP4 (Zoom)
                   </button>
                   {isDownloading && (
@@ -965,23 +1167,33 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
           </button>
 
           <button 
+             onClick={() => { setActiveMobileTool('adjust'); }}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'adjust' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
+          >
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'adjust' ? 'bg-white' : 'bg-white/10'}`}>
+              <Sliders size={24} strokeWidth={2.5} className={activeMobileTool === 'adjust' ? 'text-black' : 'text-white'} />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Ajustes</span>
+          </button>
+
+          <button 
              onClick={() => { setActiveMobileTool('filters'); }}
              className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'filters' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
             <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'filters' ? 'bg-white' : 'bg-white/10'}`}>
-              <Sliders size={24} strokeWidth={2.5} className={activeMobileTool === 'filters' ? 'text-black' : 'text-white'} />
+              <Palette size={24} strokeWidth={2.5} className={activeMobileTool === 'filters' ? 'text-black' : 'text-white'} />
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider">Filtros</span>
           </button>
 
           <button 
-             onClick={() => { setActiveMobileTool('sharpen'); }}
-             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'sharpen' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
+             onClick={() => { setActiveMobileTool('texture'); }}
+             className={`flex-shrink-0 flex flex-col items-center gap-1 min-w-[70px] ${activeMobileTool === 'texture' ? 'text-white' : 'text-gray-500 hover:text-white transition-colors'}`}
           >
-            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'sharpen' ? 'bg-white' : 'bg-white/10'}`}>
-              <Zap size={24} strokeWidth={2.5} className={activeMobileTool === 'sharpen' ? 'text-black' : 'text-white'} />
+            <div className={`p-3 rounded-full mb-1 transition-colors ${activeMobileTool === 'texture' ? 'bg-white' : 'bg-white/10'}`}>
+              <Layers size={24} strokeWidth={2.5} className={activeMobileTool === 'texture' ? 'text-black' : 'text-white'} />
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Sharpen</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Textura</span>
           </button>
 
           <button 
@@ -1021,47 +1233,12 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {activeMobileTool === 'text' && (
-            <div className="space-y-4">
-              <h3 className="text-white font-bold text-lg mb-2">Editar Texto</h3>
-              <textarea 
-                  value={text} onChange={(e) => setText(e.target.value)} rows={4}
-                  className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-3 text-white focus:outline-none"
-                />
-               <input 
-                  type="text" value={reference} onChange={(e) => setReference(e.target.value)}
-                  className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-3 text-white focus:outline-none"
-                />
-                
-                {/* Text Opacity Slider */}
-                <div className="mt-4">
-                    <GlassSlider 
-                        label="Opacidad del Texto"
-                        min={0} max={100}
-                        value={textOpacity}
-                        onChange={(val) => setTextOpacity(val)}
-                    />
-                </div>
-
-                <h3 className="text-white font-bold text-lg mt-4">Fuente</h3>
-                <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
-                  {FONTS.map((font, idx) => (
-                    <button
-                      key={font.name} onClick={() => setFontIndex(idx)}
-                      className={`flex-shrink-0 px-5 py-3 rounded-full text-sm border ${fontIndex === idx ? 'bg-white text-black' : 'bg-white/5 text-gray-400'}`}
-                      style={{ fontFamily: font.family }}
-                    >
-                      {font.name}
-                    </button>
-                  ))}
-               </div>
-            </div>
-          )}
-
+          {activeMobileTool === 'text' && renderTextTools()}
           {activeMobileTool === 'stickers' && renderStickersTool()}
           {activeMobileTool === 'gifs' && renderGifsTool()}
           {activeMobileTool === 'filters' && renderFiltersTool()}
-          {activeMobileTool === 'sharpen' && renderSharpenTool()}
+          {activeMobileTool === 'adjust' && renderAdjustTool()}
+          {activeMobileTool === 'texture' && renderTexturesTool()}
 
           {activeMobileTool === 'bg' && (
              isGradientMode ? renderGradientEngineUI() : (
@@ -1142,11 +1319,13 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
          {/* Simple Tabs for Desktop */}
          <div className="flex gap-2 mb-4 border-b border-white/10 pb-4 overflow-x-auto no-scrollbar">
-             <button onClick={() => setActiveMobileTool(null)} className={`px-3 py-1 rounded-full text-xs font-bold ${activeMobileTool === null ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Texto</button>
-             <button onClick={() => setActiveMobileTool('bg')} className={`px-3 py-1 rounded-full text-xs font-bold ${activeMobileTool === 'bg' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Fondo</button>
-             <button onClick={() => setActiveMobileTool('filters')} className={`px-3 py-1 rounded-full text-xs font-bold ${activeMobileTool === 'filters' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Filtros</button>
-             <button onClick={() => setActiveMobileTool('stickers')} className={`px-3 py-1 rounded-full text-xs font-bold ${activeMobileTool === 'stickers' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Stickers</button>
-             <button onClick={() => setActiveMobileTool('gifs')} className={`px-3 py-1 rounded-full text-xs font-bold ${activeMobileTool === 'gifs' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>GIFs</button>
+             <button onClick={() => setActiveMobileTool('text')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'text' || activeMobileTool === null ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Texto</button>
+             <button onClick={() => setActiveMobileTool('bg')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'bg' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Fondo</button>
+             <button onClick={() => setActiveMobileTool('adjust')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'adjust' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Ajustes</button>
+             <button onClick={() => setActiveMobileTool('texture')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'texture' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Textura</button>
+             <button onClick={() => setActiveMobileTool('filters')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'filters' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Filtros</button>
+             <button onClick={() => setActiveMobileTool('stickers')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'stickers' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>Stickers</button>
+             <button onClick={() => setActiveMobileTool('gifs')} className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${activeMobileTool === 'gifs' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}>GIFs</button>
          </div>
 
          <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar relative min-h-[300px]">
@@ -1154,9 +1333,12 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
             {activeMobileTool === 'stickers' && renderStickersTool()}
             {activeMobileTool === 'gifs' && renderGifsTool()}
             {activeMobileTool === 'filters' && renderFiltersTool()}
-            {activeMobileTool === 'sharpen' && renderSharpenTool()}
+            {activeMobileTool === 'adjust' && renderAdjustTool()}
+            {activeMobileTool === 'texture' && renderTexturesTool()}
             
-            {activeMobileTool === 'bg' ? (
+            {(activeMobileTool === 'text' || activeMobileTool === null) && renderTextTools()}
+
+            {activeMobileTool === 'bg' && (
                 isGradientMode ? renderGradientEngineUI() : (
                     <div className="space-y-4 animate-in fade-in">
                         {/* Overlay Opacity Slider */}
@@ -1197,48 +1379,6 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                         </div>
                     </div>
                 )
-            ) : (activeMobileTool !== 'stickers' && activeMobileTool !== 'gifs' && activeMobileTool !== 'filters' && activeMobileTool !== 'sharpen') && (
-                <>
-                    <div className="space-y-2 animate-in fade-in">
-                        <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Versículo</label>
-                        <textarea 
-                            value={text} onChange={(e) => setText(e.target.value)} rows={3}
-                            className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-white focus:outline-none"
-                        />
-                    </div>
-                    <div className="space-y-2 animate-in fade-in">
-                        <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Referencia</label>
-                        <input 
-                            type="text" value={reference} onChange={(e) => setReference(e.target.value)}
-                            className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-white focus:outline-none"
-                        />
-                    </div>
-                    
-                    {/* Text Opacity Slider */}
-                    <div className="mt-4 animate-in fade-in">
-                        <GlassSlider 
-                            label="Opacidad del Texto"
-                            min={0} max={100}
-                            value={textOpacity}
-                            onChange={(val) => setTextOpacity(val)}
-                        />
-                    </div>
-
-                    <div className="space-y-2 animate-in fade-in">
-                        <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Tipografía</label>
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                            {FONTS.map((font, idx) => (
-                                <button
-                                    key={font.name} onClick={() => setFontIndex(idx)}
-                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm border transition-all ${fontIndex === idx ? 'bg-white text-black border-white' : 'bg-white/5 text-gray-300 border-white/10'}`}
-                                    style={{ fontFamily: font.family }}
-                                >
-                                    {font.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </>
             )}
          </div>
 
@@ -1256,6 +1396,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
     <>
       {renderMobileEditor()}
       {renderDesktopEditor()}
+      {renderSupportModal()}
     </>
   );
 };

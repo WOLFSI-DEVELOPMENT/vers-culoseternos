@@ -63,36 +63,36 @@ export const VideoFeed: React.FC<VideoFeedProps> = ({ apiKey, searchQuery }) => 
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-20">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10 pb-20">
       {videos.map((video) => (
         <a 
           key={video.id.videoId}
           href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative bg-gray-900 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 block aspect-video sm:aspect-auto sm:h-auto"
+          className="group block"
         >
-          {/* Thumbnail */}
-          <div className="relative aspect-video w-full overflow-hidden">
+          {/* Thumbnail - Curved & Floating */}
+          <div className="relative aspect-video w-full overflow-hidden rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
             <img 
               src={video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium.url} 
               alt={video.snippet.title} 
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+            <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-sm">
                 <PlayCircle size={48} className="text-white drop-shadow-lg" />
             </div>
           </div>
 
-          {/* Info */}
-          <div className="p-4">
-            <h3 className="text-white font-bold text-sm line-clamp-2 mb-2 leading-snug">
+          {/* Info - Floating below */}
+          <div className="mt-3 px-1">
+            <h3 className="text-white font-bold text-base leading-snug line-clamp-2 mb-1 group-hover:text-gray-300 transition-colors">
               {video.snippet.title}
             </h3>
-            <div className="flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
                 <span>{video.snippet.channelTitle}</span>
-                <ExternalLink size={12} />
+                <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
             </div>
           </div>
         </a>

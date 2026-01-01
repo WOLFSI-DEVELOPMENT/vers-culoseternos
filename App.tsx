@@ -195,7 +195,7 @@ function App() {
       <div className="flex flex-col w-full">
         {/* Home Tab Switcher & Search */}
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8 sticky top-20 md:top-0 z-30 pt-4 md:pt-0 bg-black/95 md:bg-transparent pb-4 md:pb-6">
-            <div className="bg-white/10 backdrop-blur-xl rounded-full p-1 flex items-center border border-white/10 shadow-lg">
+            <div className="flex items-center gap-2 p-1">
                 <button 
                     onClick={() => setHomeSubTab('verses')}
                     className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${homeSubTab === 'verses' ? 'bg-white text-black shadow-md' : 'text-gray-400 hover:text-white'}`}
@@ -311,7 +311,7 @@ function App() {
                     <div className="w-full max-w-sm rounded-full py-1 flex items-center justify-center relative h-16">
                         {/* Switcher Pill */}
                         <div 
-                            className={`absolute flex p-1 bg-white/10 rounded-full backdrop-blur-md transition-all duration-300 transform ${isSearchExpanded ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+                            className={`absolute flex items-center gap-2 p-1 transition-all duration-300 transform ${isSearchExpanded ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
                         >
                             <button 
                                 onClick={() => setExploreSubTab('posts')}
