@@ -1,34 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BIBLE_BOOKS, fetchFullChapter } from '../services/bibleService';
-import { ChevronLeft, ChevronRight, BookOpen, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BookOpen, Loader2, Book } from 'lucide-react';
 import { ApiVerseResponse } from '../types';
 
 export const BibleReader: React.FC = () => {
-  const [selectedBook, setSelectedBook] = useState('Génesis');
+  const [selectedBook, setSelectedBook] = useState('Juan');
   const [chapter, setChapter] = useState(1);
   const [chapterData, setChapterData] = useState<ApiVerseResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false); // For 3D animation state
 
   const contentRef = useRef<HTMLDivElement>(null);
 
   const loadChapter = async (b: string, c: number) => {
     setLoading(true);
-    setIsFlipping(true); // Start flip
     const data = await fetchFullChapter(b, c);
-    
-    // Delay setting data slightly to sync with flip animation middle point
-    setTimeout(() => {
-        setChapterData(data);
-        if(contentRef.current) contentRef.current.scrollTop = 0;
-        setLoading(false);
-        setTimeout(() => setIsFlipping(false), 300); // End flip
-    }, 300);
+    setChapterData(data);
+    if(contentRef.current) contentRef.current.scrollTop = 0;
+    setLoading(false);
   };
 
   useEffect(() => {
     loadChapter(selectedBook, chapter);
-  }, []); // Initial load
+  }, []); 
 
   const handleNext = () => {
      setChapter(prev => {
@@ -54,88 +47,70 @@ export const BibleReader: React.FC = () => {
       loadChapter(e.target.value, 1);
   };
 
-  // --- 3D BOOK DESKTOP COMPONENT ---
-  const renderDesktopBook = () => (
-      <div className="hidden md:flex items-center justify-center w-full h-[80vh] perspective-[1500px]">
-          <div className="relative w-[900px] h-[600px] bg-[#3d2b1f] rounded-r-2xl rounded-l-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex px-4 py-4 border-l-8 border-[#2a1d15]">
-              
-              {/* Spine Highlight */}
-              <div className="absolute left-1/2 top-0 bottom-0 w-8 -ml-4 bg-gradient-to-r from-black/20 via-black/10 to-transparent z-20 pointer-events-none" />
-
-              {/* Left Page (Static base) */}
-              <div className="flex-1 bg-[#fdfbf7] rounded-l-md shadow-inner p-8 overflow-hidden relative border-r border-gray-300">
-                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] opacity-50 pointer-events-none" />
-                  <div className="h-full overflow-y-auto custom-scrollbar pr-4 text-gray-800 font-serif leading-relaxed text-lg">
-                      <div className="sticky top-0 bg-[#fdfbf7]/90 backdrop-blur-sm pb-4 mb-4 border-b border-gray-200 z-10 flex justify-between items-center">
-                           <div>
-                               <span className="block text-xs font-sans font-bold text-gray-400 uppercase tracking-widest">Reina Valera 1960 (Ref)</span>
-                               <h2 className="text-3xl font-bold text-gray-900">{selectedBook} {chapter}</h2>
-                           </div>
-                           <div className="flex gap-2">
-                               <select 
-                                   value={selectedBook}
-                                   onChange={handleBookChange}
-                                   className="bg-transparent text-sm font-bold border-none outline-none text-gray-600 hover:text-black cursor-pointer"
-                               >
-                                   {BIBLE_BOOKS.map(b => <option key={b} value={b}>{b}</option>)}
-                               </select>
-                           </div>
-                      </div>
-                      
-                      {/* Left Column Content - We split verses roughly or show half/half */}
-                      {loading ? (
-                          <div className="space-y-4">
-                              {[1,2,3,4].map(i => <div key={i} className="h-4 bg-gray-200 rounded animate-pulse w-full"/>)}
-                          </div>
-                      ) : (
-                          <div className="space-y-4">
-                              {chapterData?.verses.filter((_, i) => i < (chapterData?.verses.length || 0) / 2).map((v) => (
-                                  <p key={v.verse} className="text-justify">
-                                      <sup className="text-xs font-sans font-bold text-red-800 mr-1">{v.verse}</sup>
-                                      {v.text}
-                                  </p>
-                              ))}
-                          </div>
-                      )}
-                  </div>
+  // --- CLEAN DESKTOP READER (No 3D) ---
+  const renderDesktopReader = () => (
+      <div className="hidden md:flex flex-col items-center w-full max-w-5xl mx-auto pb-20">
+          
+          {/* Reader Header */}
+          <div className="w-full bg-[#1A1A1A] rounded-t-3xl border border-white/10 p-6 flex items-center justify-between shadow-2xl">
+              <div className="flex items-center gap-4">
+                   <div className="p-3 bg-white/5 rounded-full border border-white/10">
+                       <Book size={24} className="text-white" />
+                   </div>
+                   <div>
+                       <h2 className="text-2xl font-bold text-white tracking-wide">{selectedBook}</h2>
+                       <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Reina Valera 1960</p>
+                   </div>
               </div>
 
-              {/* Right Page (Animated) */}
-              <div className="flex-1 relative perspective-[2000px]">
-                  <div 
-                    className={`w-full h-full bg-[#fdfbf7] rounded-r-md shadow-inner p-8 origin-left transition-transform duration-700 ease-in-out transform-style-3d ${isFlipping ? '-rotate-y-12 bg-gray-100' : 'rotate-y-0'}`}
-                    style={{ transformOrigin: 'left center' }}
-                  >
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] opacity-50 pointer-events-none" />
-                        
-                        <div className="h-full overflow-y-auto custom-scrollbar pl-4 text-gray-800 font-serif leading-relaxed text-lg">
-                            <div className="sticky top-0 bg-[#fdfbf7]/90 backdrop-blur-sm pb-4 mb-4 border-b border-gray-200 z-10 flex justify-end gap-2">
-                                <button onClick={handlePrev} disabled={chapter <= 1} className="p-2 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-30">
-                                    <ChevronLeft size={20} color="#333" />
-                                </button>
-                                <span className="flex items-center font-bold text-gray-500">Cap. {chapter}</span>
-                                <button onClick={handleNext} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
-                                    <ChevronRight size={20} color="#333" />
-                                </button>
-                            </div>
-
-                            {loading ? (
-                                <div className="space-y-4 mt-10">
-                                     {[1,2,3,4].map(i => <div key={i} className="h-4 bg-gray-200 rounded animate-pulse w-full"/>)}
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {chapterData?.verses.filter((_, i) => i >= (chapterData?.verses.length || 0) / 2).map((v) => (
-                                        <p key={v.verse} className="text-justify">
-                                            <sup className="text-xs font-sans font-bold text-red-800 mr-1">{v.verse}</sup>
-                                            {v.text}
-                                        </p>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                  </div>
+              <div className="flex items-center gap-4 bg-black/20 p-2 rounded-full border border-white/5">
+                   <button 
+                        onClick={handlePrev} 
+                        disabled={chapter <= 1} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-white disabled:opacity-30 transition-colors"
+                   >
+                        <ChevronLeft size={20} />
+                   </button>
+                   <div className="flex flex-col items-center min-w-[100px]">
+                        <span className="text-xs text-gray-400 uppercase font-bold">Capítulo</span>
+                        <span className="text-xl font-serif font-bold text-white">{chapter}</span>
+                   </div>
+                   <button 
+                        onClick={handleNext} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 text-white transition-colors"
+                   >
+                        <ChevronRight size={20} />
+                   </button>
               </div>
+
+              <div className="relative group">
+                  <select 
+                        value={selectedBook}
+                        onChange={handleBookChange}
+                        className="appearance-none bg-white text-black font-bold py-2 pl-4 pr-10 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors outline-none"
+                    >
+                        {BIBLE_BOOKS.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-black pointer-events-none" size={16} />
+              </div>
+          </div>
+
+          {/* Reader Content Body */}
+          <div className="w-full bg-[#0F0F0F] rounded-b-3xl border-x border-b border-white/10 p-12 min-h-[60vh] relative">
+               {loading ? (
+                   <div className="absolute inset-0 flex items-center justify-center">
+                       <Loader2 className="w-12 h-12 text-white/20 animate-spin" />
+                   </div>
+               ) : (
+                   <div className="columns-1 md:columns-2 gap-12 space-y-6 text-lg leading-relaxed font-serif text-gray-300">
+                       {chapterData?.verses.map((v) => (
+                           <p key={v.verse} className="break-inside-avoid mb-4 hover:text-white transition-colors duration-300">
+                               <span className="text-xs font-sans font-bold text-yellow-500/80 mr-2 align-top bg-yellow-500/10 px-1.5 py-0.5 rounded">{v.verse}</span>
+                               {v.text}
+                           </p>
+                       ))}
+                   </div>
+               )}
           </div>
       </div>
   );
@@ -205,8 +180,13 @@ export const BibleReader: React.FC = () => {
 
   return (
     <>
-        {renderDesktopBook()}
+        {renderDesktopReader()}
         {renderMobileBook()}
     </>
   );
 };
+
+// Helper icon
+const ChevronDownIcon = ({ size, className }: { size: number, className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m6 9 6 6 6-6"/></svg>
+);

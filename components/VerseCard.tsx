@@ -142,24 +142,22 @@ export const VerseCard: React.FC<VerseCardProps> = ({ data, isFavorite, onToggle
                         href="https://venmo.com/u/rocioramirezpena" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 bg-[#008CFF]/10 border border-[#008CFF]/20 rounded-xl hover:bg-[#008CFF]/20 transition-colors group"
+                        className="flex items-center justify-between p-3 border border-[#008CFF] rounded-full hover:bg-[#008CFF] transition-colors group text-[#008CFF] hover:text-white"
                     >
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-[#008CFF]">Apóyanos en Venmo</span>
+                        <div className="flex items-center gap-3 w-full justify-center">
+                            <span className="font-bold">Donate</span>
                         </div>
-                        <ExternalLink size={16} className="text-[#008CFF] opacity-50 group-hover:opacity-100" />
                     </a>
                     
                     <a 
                         href="https://www.tiktok.com/@rocioramirezpena" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 bg-pink-500/10 border border-pink-500/20 rounded-xl hover:bg-pink-500/20 transition-colors group"
+                        className="flex items-center justify-between p-3 border border-white rounded-full hover:bg-white transition-colors group text-white hover:text-black"
                     >
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-pink-500">Síguenos en TikTok</span>
+                        <div className="flex items-center gap-3 w-full justify-center">
+                            <span className="font-bold">Follow</span>
                         </div>
-                        <ExternalLink size={16} className="text-pink-500 opacity-50 group-hover:opacity-100" />
                     </a>
                 </div>
 

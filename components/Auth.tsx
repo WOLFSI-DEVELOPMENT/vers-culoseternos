@@ -2,11 +2,25 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import { User } from '../types';
-import { Loader2, ArrowRight, Camera, Sparkles, Edit3, Share2, Check } from 'lucide-react';
+import { Loader2, ArrowRight, Camera, Sparkles, Edit3, Share2, Check, Fingerprint, Plus } from 'lucide-react';
 
 interface AuthProps {
   onLoginSuccess: (user: User) => void;
 }
+
+// --- WebAuthn Helpers (Simulating Backend Logic) ---
+const bufferToBase64 = (buffer: ArrayBuffer): string => {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+};
+
+const base64ToBuffer = (base64: string): ArrayBuffer => {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+};
 
 const PasskeyIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className} fill="currentColor" height="24" width="24">
@@ -71,6 +85,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
   const [onboardingStep, setOnboardingStep] = useState(0); // 0: Profile Pic, 1: Info, 2: Tutorial
   const [tempUser, setTempUser] = useState<User | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [passkeyError, setPasskeyError] = useState<string | null>(null);
   
   // Tutorial Slide State
   const [tutorialIndex, setTutorialIndex] = useState(0);
@@ -112,11 +127,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
 
   const login = useGoogleLogin({
     onSuccess: tokenResponse => {
-      // For this demo, since we don't have a backend to verify the access_token effectively 
-      // without CORS issues on some simple setups, we will simulate fetching user info 
-      // or use the ID token if available (Code flow vs Implicit).
-      // However, typical pattern with @react-oauth/google useGoogleLogin (implicit) is fetching userinfo endpoint.
-      
       fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
       })
@@ -136,21 +146,111 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
     onError: () => console.log('Login Failed'),
   });
 
-  const handlePasskeyLogin = () => {
-      // Simulate Passkey/WebAuthn Login Flow
-      // In a real app, this would use navigator.credentials.get() or navigator.credentials.create()
-      
-      // Since Passkey login implies we don't get profile info like Google provides,
-      // we initialize with empty strings so the user can fill them in onboarding.
-      const initialUser: User = {
-          name: "",
-          email: "", // Passkeys usually identify the user, but we'll ask for details or assume known
-          picture: "", 
-          username: "",
-          bio: "Amante de la Palabra ✨"
-      };
-      setTempUser(initialUser);
-      setView('onboarding');
+  // --- REAL PASSKEY LOGIN (WEBAUTHN API) ---
+  const handlePasskeyLogin = async () => {
+      setPasskeyError(null);
+      if (!window.PublicKeyCredential) {
+          setPasskeyError("Tu dispositivo no soporta Passkeys.");
+          return;
+      }
+
+      try {
+          // 1. Get stored credential ID from simulated DB (localStorage)
+          const storedCredId = localStorage.getItem('ve_passkey_id');
+          if (!storedCredId) {
+              setPasskeyError("No se encontró Passkey. Regístrate primero.");
+              return;
+          }
+
+          // 2. Generate random challenge (In real app, comes from server)
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+
+          // 3. Call WebAuthn API
+          const assertion = await navigator.credentials.get({
+              publicKey: {
+                  challenge: challenge,
+                  allowCredentials: [{
+                      id: base64ToBuffer(storedCredId),
+                      type: 'public-key',
+                      transports: ['internal', 'hybrid']
+                  }],
+                  userVerification: 'preferred'
+              }
+          }) as PublicKeyCredential;
+
+          if (assertion) {
+              // Simulating server verification success
+              const initialUser: User = {
+                  name: "Usuario Passkey",
+                  email: "user@passkey.local", 
+                  picture: "", 
+                  username: "passkey_user",
+                  bio: "Autenticado con WebAuthn 🔒"
+              };
+              setTempUser(initialUser);
+              setView('onboarding');
+          }
+      } catch (err) {
+          console.error("Passkey login error:", err);
+          setPasskeyError("Error al validar Passkey o cancelado.");
+      }
+  };
+
+  // --- REAL PASSKEY REGISTRATION (WEBAUTHN API) ---
+  const handlePasskeyRegister = async () => {
+      setPasskeyError(null);
+      if (!window.PublicKeyCredential) {
+          setPasskeyError("Tu dispositivo no soporta Passkeys.");
+          return;
+      }
+
+      try {
+          // 1. Generate challenge and user ID
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+          const userId = new Uint8Array(16);
+          window.crypto.getRandomValues(userId);
+
+          // 2. Call WebAuthn API
+          const credential = await navigator.credentials.create({
+              publicKey: {
+                  challenge: challenge,
+                  rp: {
+                      name: "Versículos Eternos",
+                      // In a real app, rp.id must be the domain (e.g., 'example.com')
+                      // When omitted, it defaults to the current domain, which is safe for demos.
+                  },
+                  user: {
+                      id: userId,
+                      name: "usuario@versiculos.app",
+                      displayName: "Usuario Nuevo"
+                  },
+                  pubKeyCredParams: [
+                      { type: 'public-key', alg: -7 }, // ES256
+                      { type: 'public-key', alg: -257 } // RS256
+                  ],
+                  authenticatorSelection: {
+                      authenticatorAttachment: 'platform', // Uses FaceID/TouchID/Windows Hello
+                      userVerification: 'required'
+                  },
+                  timeout: 60000,
+                  attestation: 'none'
+              }
+          }) as PublicKeyCredential;
+
+          if (credential) {
+              // 3. Save Credential ID to "Server" (localStorage)
+              localStorage.setItem('ve_passkey_id', bufferToBase64(credential.rawId));
+              alert("¡Passkey creado con éxito! Ahora puedes iniciar sesión.");
+              
+              // Auto login after create
+              handlePasskeyLogin();
+          }
+      } catch (err) {
+          console.error("Passkey registration error:", err);
+          setPasskeyError("No se pudo crear el Passkey.");
+      }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,14 +302,29 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                 Continuar con Google
              </button>
 
-             {/* Passkey Button */}
+             {/* Create Passkey Button (Register) - Swapped logic per request */}
              <button 
-                onClick={handlePasskeyLogin}
+                onClick={handlePasskeyRegister}
                 className="w-full py-3.5 px-6 rounded-full border border-white text-white font-bold flex items-center justify-center gap-3 hover:bg-white hover:text-black transition-all duration-300 group"
              >
                 <PasskeyIcon className="w-5 h-5 group-hover:text-black transition-colors" />
-                Continuar con Passkey
+                Crear Passkey
              </button>
+
+             {/* Sign In with Passkey Link (Login) - Swapped logic per request */}
+             <button 
+                onClick={handlePasskeyLogin}
+                className="text-xs text-gray-400 hover:text-white underline underline-offset-4 flex items-center gap-1 mt-1"
+             >
+                <Fingerprint size={12} />
+                Ya tengo una Passkey (Iniciar Sesión)
+             </button>
+
+             {passkeyError && (
+                 <p className="text-xs text-red-400 font-bold bg-red-500/10 px-3 py-1 rounded-full animate-pulse">
+                     {passkeyError}
+                 </p>
+             )}
              
              <p className="text-xs text-gray-600 text-center max-w-xs leading-relaxed mt-2">
                  Al continuar, aceptas inspirar al mundo con la belleza de la palabra.

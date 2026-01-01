@@ -60,3 +60,24 @@ export const fetchFullChapter = async (book: string, chapter: number): Promise<A
         return null;
     }
 };
+
+export const getVerseOfTheDay = (): Verse => {
+  // Generate a deterministic index based on the date string
+  const today = new Date().toDateString();
+  let hash = 0;
+  for (let i = 0; i < today.length; i++) {
+    hash = today.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % FALLBACK_VERSES.length;
+  
+  const v = FALLBACK_VERSES[index];
+  return {
+      id: 'daily-verse',
+      reference: v.reference,
+      text: v.text,
+      book_name: v.book_name,
+      chapter: v.chapter,
+      verse: v.verse,
+      translation_id: 'alera'
+  };
+};

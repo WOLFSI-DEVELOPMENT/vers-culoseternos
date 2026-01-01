@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { fetchRandomChapterVerses } from './services/bibleService';
+import { fetchRandomChapterVerses, getVerseOfTheDay } from './services/bibleService';
 import { VerseCardData, Verse, SavedDesign, User } from './types';
 import { VerseCard } from './components/VerseCard';
 import { CreateEditor } from './components/CreateEditor';
@@ -9,13 +9,108 @@ import { Auth } from './components/Auth';
 import { VideoFeed } from './components/VideoFeed';
 import { BibleReader } from './components/BibleReader';
 import { CARD_HEIGHTS } from './constants';
-import { Loader2, Search, Home, Heart, Compass, BookmarkX, PlusCircle, Rocket, MessageCircle, Share2, Bookmark, Video, Book, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Search, Home, Heart, Compass, BookmarkX, PlusCircle, Rocket, MessageCircle, Share2, Bookmark, Video, Book, Image as ImageIcon, Sun, X } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = '7302993140-qgo9bovj97d11d68q7hje32da15bvm14.apps.googleusercontent.com';
 const YOUTUBE_API_KEY = 'AIzaSyBd5o02cc1ArgEyHPRZZ_H0k0Ro_AqMbcY';
 
 const getRandomHeight = () => CARD_HEIGHTS[Math.floor(Math.random() * CARD_HEIGHTS.length)];
 const getRandomImage = (id: string) => `https://picsum.photos/seed/${id}/400/600`;
+
+// --- TIKTOK WELCOME COMPONENT ---
+const TikTokWelcome = () => {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    // Check if coming from TikTok (Referrer or In-App Browser User Agent)
+    const isTikTok = 
+        (document.referrer && document.referrer.toLowerCase().includes('tiktok.com')) || 
+        navigator.userAgent.includes('TikTok');
+    
+    const hasShown = sessionStorage.getItem('ve_tiktok_welcome');
+
+    if (isTikTok && !hasShown) {
+      setShow(true);
+      sessionStorage.setItem('ve_tiktok_welcome', 'true');
+    }
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-500">
+        <div className="bg-[#111] border border-white/10 rounded-3xl p-8 max-w-sm w-full text-center relative overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            {/* Decorative Background */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00f2ea] to-[#ff0050]" />
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#ff0050]/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#00f2ea]/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10">
+                <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Heart size={32} className="text-[#ff0050] fill-current animate-pulse" />
+                </div>
+
+                <h2 className="text-2xl font-bold text-white mb-3">¡Gracias por venir de TikTok!</h2>
+                <p className="text-gray-400 text-sm mb-8 leading-relaxed">
+                    Nos alegra mucho que estés aquí. Esperamos que encuentres la inspiración que buscas y crees algo hermoso.
+                </p>
+
+                <button 
+                    onClick={() => setShow(false)}
+                    className="w-full py-3.5 bg-white text-black rounded-full font-bold hover:bg-gray-200 transition-colors shadow-lg"
+                >
+                    Comenzar a Explorar
+                </button>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+// --- DAILY SPLASH SCREEN COMPONENT ---
+const DailySplash = ({ onClose }: { onClose: () => void }) => {
+    const verse = getVerseOfTheDay();
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-700">
+             {/* Background Effects */}
+             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30" />
+             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+
+             <div className="relative z-10 flex flex-col items-center text-center max-w-lg w-full">
+                  <div className="mb-6 animate-in zoom-in duration-1000 delay-200">
+                      <div className="w-20 h-20 rounded-full bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center">
+                          <Sun size={40} className="text-yellow-400 animate-pulse-slow" />
+                      </div>
+                  </div>
+
+                  <h1 className="text-5xl md:text-6xl font-serif font-bold text-white mb-2 tracking-tight animate-in slide-in-from-bottom-4 duration-1000 delay-300">
+                      Buenos Días
+                  </h1>
+                  <p className="text-sm font-bold text-yellow-500 uppercase tracking-widest mb-10 animate-in slide-in-from-bottom-4 duration-1000 delay-500">
+                      Versículo del Día
+                  </p>
+
+                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl animate-in slide-in-from-bottom-8 duration-1000 delay-700">
+                      <p className="text-xl md:text-2xl font-serif leading-relaxed text-gray-100 italic mb-6">
+                          "{verse.text}"
+                      </p>
+                      <p className="text-sm font-bold text-white/60 uppercase">
+                          {verse.reference}
+                      </p>
+                  </div>
+
+                  <button 
+                      onClick={onClose}
+                      className="mt-12 px-10 py-4 bg-white text-black rounded-full font-bold text-lg hover:bg-gray-200 transition-transform active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)] animate-in fade-in duration-1000 delay-1000"
+                  >
+                      Comenzar mi día
+                  </button>
+             </div>
+        </div>
+    );
+};
+
 
 // Custom Community Icon Component
 const CommunityIcon = ({ size = 24, className = "" }: { size?: number, className?: string }) => (
@@ -34,8 +129,19 @@ const CommunityIcon = ({ size = 24, className = "" }: { size?: number, className
 );
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Load user from localStorage
+  const [user, setUser] = useState<User | null>(() => {
+      try {
+          const saved = localStorage.getItem('ve_user');
+          return saved ? JSON.parse(saved) : null;
+      } catch (e) {
+          return null;
+      }
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+       return !!localStorage.getItem('ve_user');
+  });
 
   const [verses, setVerses] = useState<VerseCardData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +158,10 @@ function App() {
   // Search State for Home
   const [homeSearchQuery, setHomeSearchQuery] = useState('');
   
+  // Daily Splash State
+  const [showDailySplash, setShowDailySplash] = useState(false);
+  const [dailyVerse] = useState(getVerseOfTheDay());
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const homeSearchInputRef = useRef<HTMLInputElement>(null);
   
@@ -89,15 +199,39 @@ function App() {
     localStorage.setItem('savedDesigns', JSON.stringify(savedDesigns));
   }, [savedDesigns]);
 
+  // Check for Daily Splash on Mount
+  useEffect(() => {
+    if (isAuthenticated) {
+        const today = new Date().toDateString();
+        const lastSeen = localStorage.getItem('ve_last_daily_splash');
+        
+        if (lastSeen !== today) {
+            setShowDailySplash(true);
+        }
+    }
+  }, [isAuthenticated]);
+
+  const handleCloseSplash = () => {
+      setShowDailySplash(false);
+      localStorage.setItem('ve_last_daily_splash', new Date().toDateString());
+  };
+
   // Handle Login
   const handleLoginSuccess = (userData: User) => {
       setUser(userData);
       setIsAuthenticated(true);
+      localStorage.setItem('ve_user', JSON.stringify(userData));
+  };
+
+  const handleUpdateUser = (updatedUser: User) => {
+      setUser(updatedUser);
+      localStorage.setItem('ve_user', JSON.stringify(updatedUser));
   };
 
   const handleLogout = () => {
       setUser(null);
       setIsAuthenticated(false);
+      localStorage.removeItem('ve_user');
       setInitialLoad(true);
       setVerses([]);
       setActiveTab('home');
@@ -193,6 +327,34 @@ function App() {
   const renderHomeContent = () => {
     return (
       <div className="flex flex-col w-full">
+        {/* Floating Verse of the Day Ticker */}
+        <div className="w-full mb-6">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-1 flex items-center justify-center overflow-hidden relative shadow-lg group">
+                 {/* Desktop: Centered single line */}
+                 <div className="hidden md:flex items-center gap-3 px-4">
+                     <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest whitespace-nowrap">Versículo del Día</span>
+                     <div className="h-4 w-px bg-white/10" />
+                     <p className="text-sm font-serif text-white italic truncate max-w-xl">
+                         "{dailyVerse.text}"
+                     </p>
+                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{dailyVerse.reference}</span>
+                 </div>
+
+                 {/* Mobile: Ticker Animation */}
+                 <div className="md:hidden flex items-center whitespace-nowrap overflow-hidden w-full relative h-6">
+                      <div className="animate-[marquee_15s_linear_infinite] inline-flex items-center gap-8">
+                         <span className="text-xs font-bold text-yellow-500 uppercase">Versículo del Día</span>
+                         <span className="text-sm font-serif text-white italic">"{dailyVerse.text}"</span>
+                         <span className="text-xs font-bold text-gray-400 uppercase">{dailyVerse.reference}</span>
+                         {/* Duplicate for smooth loop */}
+                         <span className="text-xs font-bold text-yellow-500 uppercase">Versículo del Día</span>
+                         <span className="text-sm font-serif text-white italic">"{dailyVerse.text}"</span>
+                         <span className="text-xs font-bold text-gray-400 uppercase">{dailyVerse.reference}</span>
+                      </div>
+                 </div>
+            </div>
+        </div>
+
         {/* Home Tab Switcher & Search */}
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8 sticky top-20 md:top-0 z-30 pt-4 md:pt-0 bg-black/95 md:bg-transparent pb-4 md:pb-6">
             <div className="flex items-center gap-2 p-1">
@@ -292,7 +454,7 @@ function App() {
                 designs={savedDesigns} 
                 favorites={favorites} 
                 user={user} 
-                onUpdateUser={setUser}
+                onUpdateUser={handleUpdateUser}
                 onLogout={handleLogout}
             /> 
         ) : null;
@@ -304,145 +466,147 @@ function App() {
 
     if (activeTab === 'explore') {
         return (
-            <div className="w-full flex flex-col items-center h-[calc(100vh-80px)] md:h-screen">
+            <div className="w-full flex flex-col items-center h-[calc(100vh-80px)] md:h-screen relative">
                 
-                {/* STICKY HEADER */}
-                <div className="sticky top-0 z-40 w-full flex justify-center bg-black/80 backdrop-blur-md pt-4 pb-2 -mt-4">
-                    <div className="w-full max-w-sm rounded-full py-1 flex items-center justify-center relative h-16">
-                        {/* Switcher Pill */}
+                {/* FLOATING PILL HEADER */}
+                <div className="fixed top-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
+                    <div className="pointer-events-auto bg-black/30 backdrop-blur-xl border border-white/10 rounded-full p-1 shadow-2xl flex items-center gap-1 transition-all duration-300">
+                        {/* Switcher Buttons */}
                         <div 
-                            className={`absolute flex items-center gap-2 p-1 transition-all duration-300 transform ${isSearchExpanded ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+                            className={`flex items-center gap-1 transition-all duration-300 overflow-hidden ${isSearchExpanded ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
                         >
                             <button 
                                 onClick={() => setExploreSubTab('posts')}
-                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'posts' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'posts' ? 'bg-white text-black shadow-lg' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
                             >
                                 Posts
                             </button>
                             <button 
                                 onClick={() => setExploreSubTab('verses')}
-                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'verses' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all duration-300 ${exploreSubTab === 'verses' ? 'bg-white text-black shadow-lg' : 'text-gray-300 hover:text-white hover:bg-white/10'}`}
                             >
                                 Biblia
                             </button>
                         </div>
                         
-                        {/* Animated Search Button/Bar */}
+                        {/* Search */}
                         <div 
                             ref={searchInputRef as any}
-                            className={`bg-white/10 backdrop-blur-md rounded-full flex items-center transition-all duration-500 ease-apple absolute right-4 ${isSearchExpanded ? 'w-full right-0 left-0 mx-4 pl-4 pr-1 bg-black/90 border border-white/20 h-12' : 'w-12 h-12 justify-center hover:bg-white/20 cursor-pointer'}`}
+                            className={`flex items-center transition-all duration-500 ease-apple ${isSearchExpanded ? 'w-72 bg-black/40 rounded-full px-2 py-1' : 'w-10 h-10 justify-center hover:bg-white/10 rounded-full cursor-pointer'}`}
                             onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
                         >
-                            <Search size={20} className="text-white shrink-0" />
+                            <Search size={18} className="text-white shrink-0" />
                             <input 
                                 type="text" 
-                                placeholder="Buscar..."
-                                className={`bg-transparent border-none outline-none text-white text-sm ml-2 w-full ${isSearchExpanded ? 'opacity-100' : 'opacity-0 w-0 pointer-events-none'}`}
+                                placeholder="Buscar inspiración..."
+                                className={`bg-transparent border-none outline-none text-white text-sm ml-2 w-full placeholder:text-gray-400 ${isSearchExpanded ? 'opacity-100' : 'opacity-0 w-0 pointer-events-none'}`}
                                 autoFocus={isSearchExpanded}
                             />
                             {isSearchExpanded && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); setIsSearchExpanded(false); }}
-                                    className="p-2 text-gray-400 hover:text-white"
+                                    className="p-1 text-gray-400 hover:text-white"
                                 >
-                                    <BookmarkX size={20} className="rotate-45" />
+                                    <X size={16} />
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {exploreSubTab === 'posts' ? (
-                     <div className="flex flex-col items-center justify-center flex-1 w-full text-center animate-in fade-in">
-                        <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center mb-6">
-                            <Rocket size={32} className="text-purple-400" />
+                <div className="w-full h-full pt-16">
+                    {exploreSubTab === 'posts' ? (
+                         <div className="flex flex-col items-center justify-center h-full w-full text-center animate-in fade-in">
+                            <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center mb-6">
+                                <Rocket size={32} className="text-purple-400" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-white mb-2">Comunidad</h2>
+                            <p className="text-gray-500">Próximamente disponible.</p>
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">Comunidad</h2>
-                        <p className="text-gray-500">Próximamente disponible.</p>
-                    </div>
-                ) : (
-                    <>
-                        {/* Mobile: Grid Layout */}
-                        <div className="md:hidden w-full columns-1 sm:columns-2 gap-4 space-y-4 px-2 pb-20 animate-in fade-in pt-4">
-                            {verses.map((verse) => (
-                                <div key={verse.id + '-explore-mob'} className="relative break-inside-avoid aspect-[9/16] rounded-2xl overflow-hidden bg-gray-900 group">
-                                    <img src={verse.imageUrl} className="w-full h-full object-cover" loading="lazy" />
-                                    <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
-                                    
-                                    <div className="absolute bottom-16 right-2 flex flex-col items-center gap-4 z-20">
-                                        <div className="flex flex-col items-center gap-1">
-                                            <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><Heart size={20} /></button>
-                                            <span className="text-[10px] font-bold">8.5k</span>
-                                        </div>
-                                        <div className="flex flex-col items-center gap-1">
-                                            <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><MessageCircle size={20} /></button>
-                                            <span className="text-[10px] font-bold">124</span>
-                                        </div>
-                                        <div className="flex flex-col items-center gap-1">
-                                            <button onClick={(e) => {e.stopPropagation(); toggleFavorite(verse)}} className={`p-2 bg-black/40 backdrop-blur-sm rounded-full transition-colors ${isFavorite(verse) ? 'text-yellow-400' : 'text-white'}`}><Bookmark size={20} fill={isFavorite(verse) ? "currentColor" : "none"} /></button>
-                                            <span className="text-[10px] font-bold">Guardar</span>
-                                        </div>
-                                        <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><Share2 size={20} /></button>
-                                    </div>
-                                    
-                                    <div className="absolute bottom-0 left-0 right-14 p-4 z-10 bg-gradient-to-t from-black/80 to-transparent pt-12">
-                                        <h3 className="text-white font-serif font-bold text-lg leading-snug line-clamp-4 mb-2">"{verse.text}"</h3>
-                                        <p className="text-xs text-gray-300 font-bold uppercase tracking-wider">{verse.reference}</p>
-                                    </div>
-                                </div>
-                            ))}
-                             {/* Infinite Scroll Trigger for Mobile Explore */}
-                            <div ref={observerTarget} className="h-20 w-full" />
-                        </div>
-
-                        {/* Desktop/Tablet: TikTok Style Single Feed */}
-                        <div className="hidden md:flex flex-col items-center w-full h-[85vh] overflow-y-scroll snap-y snap-mandatory no-scrollbar pb-20">
-                            {verses.map((verse) => (
-                                <div key={verse.id + '-explore-desk'} className="snap-center w-full h-full flex items-center justify-center relative shrink-0 py-8">
-                                    <div className="relative aspect-[9/16] h-full max-h-[80vh] rounded-3xl overflow-hidden bg-gray-900 shadow-2xl">
+                    ) : (
+                        <>
+                            {/* Mobile: Grid Layout */}
+                            <div className="md:hidden w-full columns-1 sm:columns-2 gap-4 space-y-4 px-2 pb-20 animate-in fade-in pt-4">
+                                {verses.map((verse) => (
+                                    <div key={verse.id + '-explore-mob'} className="relative break-inside-avoid aspect-[9/16] rounded-2xl overflow-hidden bg-gray-900 group">
                                         <img src={verse.imageUrl} className="w-full h-full object-cover" loading="lazy" />
-                                        <div className="absolute inset-0 bg-black/20" />
+                                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors" />
                                         
-                                        <div className="absolute bottom-0 left-0 right-0 p-8 z-10 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-32">
-                                            <h3 className="text-white font-serif font-bold text-3xl leading-tight mb-4 drop-shadow-lg">"{verse.text}"</h3>
-                                            <p className="text-sm text-gray-300 font-bold uppercase tracking-widest bg-white/10 inline-block px-3 py-1 rounded-full backdrop-blur-md">{verse.reference}</p>
+                                        <div className="absolute bottom-16 right-2 flex flex-col items-center gap-4 z-20">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><Heart size={20} /></button>
+                                                <span className="text-[10px] font-bold">8.5k</span>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><MessageCircle size={20} /></button>
+                                                <span className="text-[10px] font-bold">124</span>
+                                            </div>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <button onClick={(e) => {e.stopPropagation(); toggleFavorite(verse)}} className={`p-2 bg-black/40 backdrop-blur-sm rounded-full transition-colors ${isFavorite(verse) ? 'text-yellow-400' : 'text-white'}`}><Bookmark size={20} fill={isFavorite(verse) ? "currentColor" : "none"} /></button>
+                                                <span className="text-[10px] font-bold">Guardar</span>
+                                            </div>
+                                            <button className="p-2 bg-black/40 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"><Share2 size={20} /></button>
+                                        </div>
+                                        
+                                        <div className="absolute bottom-0 left-0 right-14 p-4 z-10 bg-gradient-to-t from-black/80 to-transparent pt-12">
+                                            <h3 className="text-white font-serif font-bold text-lg leading-snug line-clamp-4 mb-2">"{verse.text}"</h3>
+                                            <p className="text-xs text-gray-300 font-bold uppercase tracking-wider">{verse.reference}</p>
                                         </div>
                                     </div>
+                                ))}
+                                 {/* Infinite Scroll Trigger for Mobile Explore */}
+                                <div ref={observerTarget} className="h-20 w-full" />
+                            </div>
 
-                                    {/* Floating Actions Outside Right (Desktop Updated UI) */}
-                                    <div className="absolute right-[calc(50%-280px)] top-1/2 -translate-y-1/2 flex flex-col gap-8 ml-8">
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
-                                            <Heart size={32} className="text-white drop-shadow-lg hover:text-red-500 transition-colors" />
-                                            <span className="text-xs font-bold text-white drop-shadow-md">8.5k</span>
-                                        </div>
-                                        
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
-                                            <MessageCircle size={32} className="text-white drop-shadow-lg" />
-                                            <span className="text-xs font-bold text-white drop-shadow-md">124</span>
-                                        </div>
-
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); toggleFavorite(verse); }}
-                                                className={`transition-colors drop-shadow-lg ${isFavorite(verse) ? 'text-yellow-400' : 'text-white'}`}
-                                            >
-                                                <Bookmark size={32} fill={isFavorite(verse) ? "currentColor" : "none"} />
-                                            </button>
-                                            <span className="text-xs font-bold text-white drop-shadow-md">Guardar</span>
+                            {/* Desktop/Tablet: TikTok Style Single Feed */}
+                            <div className="hidden md:flex flex-col items-center w-full h-full overflow-y-scroll snap-y snap-mandatory no-scrollbar pb-20">
+                                {verses.map((verse) => (
+                                    <div key={verse.id + '-explore-desk'} className="snap-center w-full h-full flex items-center justify-center relative shrink-0 py-8">
+                                        <div className="relative aspect-[9/16] h-full max-h-[80vh] rounded-3xl overflow-hidden bg-gray-900 shadow-2xl">
+                                            <img src={verse.imageUrl} className="w-full h-full object-cover" loading="lazy" />
+                                            <div className="absolute inset-0 bg-black/20" />
+                                            
+                                            <div className="absolute bottom-0 left-0 right-0 p-8 z-10 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-32">
+                                                <h3 className="text-white font-serif font-bold text-3xl leading-tight mb-4 drop-shadow-lg">"{verse.text}"</h3>
+                                                <p className="text-sm text-gray-300 font-bold uppercase tracking-widest bg-white/10 inline-block px-3 py-1 rounded-full backdrop-blur-md">{verse.reference}</p>
+                                            </div>
                                         </div>
 
-                                        <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
-                                            <Share2 size={32} className="text-white drop-shadow-lg" />
-                                            <span className="text-xs font-bold text-white drop-shadow-md">Share</span>
+                                        {/* Floating Actions Outside Right (Desktop Updated UI) */}
+                                        <div className="absolute right-[calc(50%-280px)] top-1/2 -translate-y-1/2 flex flex-col gap-8 ml-8">
+                                            <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                                <Heart size={32} className="text-white drop-shadow-lg hover:text-red-500 transition-colors" />
+                                                <span className="text-xs font-bold text-white drop-shadow-md">8.5k</span>
+                                            </div>
+                                            
+                                            <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                                <MessageCircle size={32} className="text-white drop-shadow-lg" />
+                                                <span className="text-xs font-bold text-white drop-shadow-md">124</span>
+                                            </div>
+
+                                            <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); toggleFavorite(verse); }}
+                                                    className={`transition-colors drop-shadow-lg ${isFavorite(verse) ? 'text-yellow-400' : 'text-white'}`}
+                                                >
+                                                    <Bookmark size={32} fill={isFavorite(verse) ? "currentColor" : "none"} />
+                                                </button>
+                                                <span className="text-xs font-bold text-white drop-shadow-md">Guardar</span>
+                                            </div>
+
+                                            <div className="flex flex-col items-center gap-2 group cursor-pointer transition-transform hover:scale-110">
+                                                <Share2 size={32} className="text-white drop-shadow-lg" />
+                                                <span className="text-xs font-bold text-white drop-shadow-md">Share</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                             {/* Infinite Scroll Trigger for Desktop Explore */}
-                            <div ref={observerTarget} className="h-10 w-full" />
-                        </div>
-                    </>
-                )}
+                                ))}
+                                 {/* Infinite Scroll Trigger for Desktop Explore */}
+                                <div ref={observerTarget} className="h-10 w-full" />
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         );
     }
@@ -466,6 +630,9 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {showDailySplash && <DailySplash onClose={handleCloseSplash} />}
+      <TikTokWelcome />
+      
       {!isAuthenticated ? (
           <Auth onLoginSuccess={handleLoginSuccess} />
       ) : (

@@ -20,6 +20,17 @@ const FONTS = [
   { name: 'Urbano', family: 'Bebas Neue, sans-serif' },
 ];
 
+const TEXT_TEMPLATES = [
+    { name: 'Simple', fontIndex: 5, letterSpacing: 0, shadow: 0, stroke: false, opacity: 100 },
+    { name: 'Épico', fontIndex: 4, letterSpacing: 2, shadow: 80, stroke: false, opacity: 100 },
+    { name: 'Neon', fontIndex: 0, letterSpacing: 1, shadow: 50, stroke: true, opacity: 100 },
+    { name: 'Romántico', fontIndex: 3, letterSpacing: 0, shadow: 20, stroke: false, opacity: 90 },
+    { name: 'Bold', fontIndex: 9, letterSpacing: -1, shadow: 100, stroke: false, opacity: 100 },
+    { name: 'Outline', fontIndex: 10, letterSpacing: 4, shadow: 0, stroke: true, opacity: 100 },
+    { name: 'Sutil', fontIndex: 7, letterSpacing: 1, shadow: 10, stroke: false, opacity: 80 },
+    { name: 'Retro', fontIndex: 8, letterSpacing: 0, shadow: 60, stroke: true, opacity: 100 },
+];
+
 const COLOR_PALETTE = [
   '#FFFFFF', '#000000', '#FF0000', '#FF7F00', '#FFFF00', '#00FF00', 
   '#00FF00', '#0000FF', '#4B0082', '#9400D3', '#FF1493', '#00CED1', '#FFD700',
@@ -163,6 +174,7 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
   const [textOpacity, setTextOpacity] = useState(100); 
   const [letterSpacing, setLetterSpacing] = useState(0); // -2 to 10
   const [textShadowLevel, setTextShadowLevel] = useState(50); // 0 to 100
+  const [textStroke, setTextStroke] = useState(false);
 
   // Image Adjustments (Replacing simple Sharpen)
   const [selectedFilter, setSelectedFilter] = useState('none');
@@ -586,24 +598,22 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
                         href="https://venmo.com/u/rocioramirezpena" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 bg-[#008CFF]/10 border border-[#008CFF]/20 rounded-xl hover:bg-[#008CFF]/20 transition-colors group"
+                        className="flex items-center justify-between p-3 border border-[#008CFF] rounded-full hover:bg-[#008CFF] transition-colors group text-[#008CFF] hover:text-white"
                     >
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-[#008CFF]">Apóyanos en Venmo</span>
+                        <div className="flex items-center gap-3 w-full justify-center">
+                            <span className="font-bold">Donate</span>
                         </div>
-                        <ExternalLink size={16} className="text-[#008CFF] opacity-50 group-hover:opacity-100" />
                     </a>
                     
                     <a 
                         href="https://www.tiktok.com/@rocioramirezpena" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 bg-pink-500/10 border border-pink-500/20 rounded-xl hover:bg-pink-500/20 transition-colors group"
+                        className="flex items-center justify-between p-3 border border-white rounded-full hover:bg-white transition-colors group text-white hover:text-black"
                     >
-                        <div className="flex items-center gap-3">
-                            <span className="font-bold text-pink-500">Síguenos en TikTok</span>
+                        <div className="flex items-center gap-3 w-full justify-center">
+                            <span className="font-bold">Follow</span>
                         </div>
-                        <ExternalLink size={16} className="text-pink-500 opacity-50 group-hover:opacity-100" />
                     </a>
                 </div>
 
@@ -800,7 +810,8 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
               style={{ 
                   fontFamily: FONTS[fontIndex].family,
                   letterSpacing: `${letterSpacing}px`,
-                  textShadow: `0px 4px ${textShadowLevel/2}px rgba(0,0,0, ${textShadowLevel/100})`
+                  textShadow: `0px 4px ${textShadowLevel/2}px rgba(0,0,0, ${textShadowLevel/100})`,
+                  WebkitTextStroke: textStroke ? '1px black' : '0px',
               }}
             >
               {text}
@@ -1047,6 +1058,37 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
 
   const renderTextTools = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+        
+        {/* Templates Section */}
+        <div className="space-y-2">
+            <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Plantillas de Texto</label>
+            <div className="grid grid-cols-4 gap-2">
+                {TEXT_TEMPLATES.map((tpl, i) => (
+                    <button
+                        key={i}
+                        onClick={() => {
+                            setFontIndex(tpl.fontIndex);
+                            setLetterSpacing(tpl.letterSpacing);
+                            setTextShadowLevel(tpl.shadow);
+                            setTextStroke(tpl.stroke);
+                            setTextOpacity(tpl.opacity);
+                        }}
+                        className="bg-white/5 border border-white/10 rounded-lg p-2 text-center hover:bg-white/10 transition-colors"
+                    >
+                        <span className="block text-lg text-white" style={{ 
+                            fontFamily: FONTS[tpl.fontIndex].family,
+                            textShadow: tpl.shadow > 0 ? '0 2px 5px rgba(0,0,0,0.5)' : 'none',
+                            WebkitTextStroke: tpl.stroke ? '0.5px white' : '0px',
+                            color: tpl.stroke ? 'transparent' : 'white'
+                        }}>
+                            Abc
+                        </span>
+                        <span className="text-[9px] text-gray-400 uppercase mt-1 block">{tpl.name}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+
         {/* Alignment */}
         <div className="bg-white/5 rounded-xl p-2 flex justify-between">
              <button onClick={() => setTextAlign('left')} className={`p-2 rounded-lg flex-1 flex justify-center ${textAlign === 'left' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}><AlignLeft size={20}/></button>
@@ -1057,6 +1099,16 @@ export const CreateEditor: React.FC<CreateEditorProps> = ({ onBack, onSaveDesign
         <GlassSlider label="Espaciado" min={-2} max={10} value={letterSpacing} onChange={setLetterSpacing} />
         <GlassSlider label="Sombra" min={0} max={100} value={textShadowLevel} onChange={setTextShadowLevel} />
         <GlassSlider label="Opacidad" min={0} max={100} value={textOpacity} onChange={setTextOpacity} />
+        
+        <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
+            <span className="text-xs text-gray-300 uppercase font-bold">Borde / Stroke</span>
+            <button 
+                onClick={() => setTextStroke(!textStroke)}
+                className={`w-12 h-6 rounded-full relative transition-colors ${textStroke ? 'bg-green-500' : 'bg-gray-600'}`}
+            >
+                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${textStroke ? 'left-7' : 'left-1'}`} />
+            </button>
+        </div>
 
         <div className="space-y-2">
             <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">Contenido</label>
